@@ -2,7 +2,17 @@
   "meta": {
     "siteName": "Kridoc",
     "titleTemplate": "{title} · Kridoc",
-    "description": "Kridoc — started from the Krizaka Next.js template."
+    "description": "Kridoc is Krizaka's document storage. It is in design: we are settling the need and the scope before we build it."
   },
-  "home": { "title": "Kridoc", "lead": "Replace this page: it is the template's starting point." }
+  "home": {
+    "title": "Kridoc",
+    "lead": "Krizaka's document storage.",
+    "status": "In design",
+    "body": "We are settling the need and the scope before we build it. Nothing is offered yet.",
+    "back": "Back to krizaka.com",
+    "backAria": "Back to krizaka.com, the Krizaka company site",
+    "byline": "A Krizaka product",
+    "language": "Language",
+    "theme": "Theme"
+  }
 }

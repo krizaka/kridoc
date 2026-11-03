@@ -8,7 +8,7 @@
 # Kridoc
 
 > **Kridoc by Krizaka** is the commercial name; `kachizaka` is the code name (repository, packages, ids). Visitors read Kridoc
-> everywhere: the name comes from `@krizaka/org` (`displayName("kachizaka")`), never typed, and never the code name.
+> everywhere (the catalogues `apps/web/messages/*.json`); a test fails on the code name in a rendered word.
 
 **Status: in design.** Kridoc is Krizaka's document storage. Its need and scope are being settled; nothing is built or offered
 yet: no sign-up, no waiting list, no date.
@@ -20,7 +20,7 @@ yet: no sign-up, no waiting list, no date.
 
 ## What is here
 
-Today, one thing: the **coming-soon page** of `www.kridoc.com` (`apps/web`), French by default and English, built with
+Today, one thing: the **coming-soon page** of `www.kridoc.com` (`apps/web`; its hosting is being decided), French by default and English, built with
 `@krizaka/ui` and `@krizaka/fonts`, in both themes. It says what Kridoc is in one line, that it is in design, and links back to
 [krizaka.com](https://www.krizaka.com). It holds no customer data.
 

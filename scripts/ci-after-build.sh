@@ -8,4 +8,4 @@ trap 'tail -100 web.log || true' ERR
 for _ in $(seq 1 60); do curl -sf http://localhost:3000/api/healthz && break; sleep 1; done
 # The host of the `seo:check` script, normalised the way a URL is (the template's placeholder host has capitals, Next lowercases it).
 HOST="$(node -e "console.log(new URL(require('./package.json').scripts['seo:check'].match(/--host (\\S+)/)[1]).origin)")"
-node scripts/check-seo-family.mjs --base http://localhost:3000 --host "$HOST" --types WebSite,SoftwareApplication
+node scripts/check-seo-family.mjs --base http://localhost:3000 --host "$HOST" --types WebSite

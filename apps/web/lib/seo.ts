@@ -3,11 +3,11 @@
 import type { Metadata } from "next";
 
 import { getDictionary, type Locale } from "@/lib/i18n";
-import { REPO_URL, SITE_URL } from "@/lib/site";
+import { KRIZAKA_URL, REPO_URL, SITE_URL } from "@/lib/site";
 
-const KRIZAKA_URL = "https://www.krizaka.com";
 export const ORG_ID = `${KRIZAKA_URL}/#organization`;
 const ORG = { "@type": "Organization", "@id": ORG_ID, name: "Krizaka", url: KRIZAKA_URL };
+/** The social card, drawn at build by app/og.png/route.tsx. */
 export const OG_IMAGE = `${SITE_URL}/og.png`;
 
 /** The search bots and AI crawlers the whole family welcomes - the same list on every site. */
@@ -37,7 +37,7 @@ export function pageMetadata(locale: Locale): Metadata {
     description: t.meta.description,
     alternates: {
       canonical: url,
-      languages: { en: `${SITE_URL}/en`, fr: `${SITE_URL}/fr`, "x-default": `${SITE_URL}/en` },
+      languages: { en: `${SITE_URL}/en`, fr: `${SITE_URL}/fr`, "x-default": `${SITE_URL}/fr` },
     },
     openGraph: {
       type: "website",
@@ -57,7 +57,7 @@ export function pageMetadata(locale: Locale): Metadata {
   };
 }
 
-/** The site and the application it presents, both published by Krizaka. */
+/** The site, published by Krizaka. No SoftwareApplication: Kridoc is in design, nothing is built or offered yet. */
 export function siteJsonLd(locale: Locale) {
   const t = getDictionary(locale);
   return {
@@ -68,20 +68,9 @@ export function siteJsonLd(locale: Locale) {
         "@id": `${SITE_URL}/#website`,
         url: `${SITE_URL}/`,
         name: t.meta.siteName,
-        inLanguage: ["en", "fr"],
-        publisher: ORG,
-      },
-      {
-        "@type": "SoftwareApplication",
-        "@id": `${SITE_URL}/#software`,
-        name: t.meta.siteName,
-        url: `${SITE_URL}/`,
         description: t.meta.description,
-        applicationCategory: "BusinessApplication",
-        operatingSystem: "Web",
-        codeRepository: REPO_URL,
+        inLanguage: ["fr", "en"],
         publisher: ORG,
-        isPartOf: { "@id": `${SITE_URL}/#website` },
       },
     ],
   };
@@ -96,8 +85,8 @@ export function llmsText(): string {
 
 ## Key pages
 
-- [${en.home.title}](${SITE_URL}/en): ${en.home.lead}
 - [${getDictionary("fr").home.title} (fr)](${SITE_URL}/fr)
+- [${en.home.title} (en)](${SITE_URL}/en): ${en.home.lead} ${en.home.status}.
 
 ## Source
 
@@ -107,6 +96,6 @@ export function llmsText(): string {
 
 - [Krizaka](${KRIZAKA_URL}): the company, an open-source software studio in Montréal
 
-Languages: English and French. Sitemap: ${SITE_URL}/sitemap.xml
+Languages: French and English. Sitemap: ${SITE_URL}/sitemap.xml
 `;
 }

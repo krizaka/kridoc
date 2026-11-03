@@ -14,7 +14,7 @@
     "test": "turbo run test && vitest run && node --test scripts/check-template-drift.test.mjs",
     "check": "pnpm run lint && pnpm run typecheck && pnpm run test",
     "drift": "node scripts/check-template-drift.mjs",
-    "seo:check": "node scripts/check-seo-family.mjs --base http://localhost:3000 --host https://www.kachizaka.com --types WebSite,SoftwareApplication",
+    "seo:check": "node scripts/check-seo-family.mjs --base http://localhost:3000 --host https://www.kridoc.com --types WebSite",
     "lint:sg": "krizaka-sg-ratchet",
     "sg:ratchet:update": "krizaka-sg-ratchet --update",
     "sg:fix": "node scripts/sg-fix.mjs",
