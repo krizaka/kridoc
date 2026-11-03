@@ -1,40 +1,46 @@
-# template-next-app
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://krizaka-assets.b-cdn.net/brand/kachizaka/logo-dark.svg">
+    <img src="https://krizaka-assets.b-cdn.net/brand/kachizaka/logo-light.svg" alt="Kridoc" width="96">
+  </picture>
+</p>
 
-[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=krizaka_template-next-app&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=krizaka_template-next-app) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=krizaka_template-next-app&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=krizaka_template-next-app) [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=krizaka_template-next-app&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=krizaka_template-next-app) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=krizaka_template-next-app&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=krizaka_template-next-app) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=krizaka_template-next-app&metric=coverage)](https://sonarcloud.io/summary/new_code?id=krizaka_template-next-app)
+# Kridoc
 
-The starting point of a Krizaka product site: a Next.js (App Router) pnpm/turbo monorepo with `apps/web`, wired to everything the family
-shares. **It only wires**: the pipeline, deploy tool and UI are the org's reusable workflows and `@krizaka/*` packages, so a fix there
-reaches every product without touching the template.
+> **Kridoc by Krizaka** is the commercial name; `kachizaka` is the code name (repository, packages, ids). Visitors read Kridoc
+> everywhere: the name comes from `@krizaka/org` (`displayName("kachizaka")`), never typed, and never the code name.
 
-## How to start a product from this
+**Status: in design.** Kridoc is Krizaka's document storage. Its need and scope are being settled; nothing is built or offered
+yet: no sign-up, no waiting list, no date.
 
-1. On GitHub: **Use this template** → `krizaka/<product>` (private until the dev site is ready), or `gh repo create krizaka/<product> --template krizaka/template-next-app`.
-2. Clone, then `node scripts/init.mjs <product> "<Product>"` (lowercase slug, display name): it fills the double-underscore placeholders (slug, display name)
-   everywhere, then deletes itself. Commit that as the first commit.
-3. `pnpm install && pnpm check` (lint with ast-grep ratchet and i18n check, typecheck, tests) and `pnpm build`.
-4. Protect `main` like the org's other repos (PR + required check `Lint · Typecheck · Tests · Build`, squash only).
-5. Brand: add the product's tokens to `@krizaka/tokens` and the import in `apps/web/app/globals.css`; marks come from `@krizaka/ui`.
-6. Deploy: `deploy/digitalocean/app.yaml` (create the app once, then `krizaka-deploy deploy --apply` — always `--context default`,
-   pull main first). Fill `dev-preview.json` honestly; claim the badge only when it is complete.
+[![CI](https://github.com/krizaka/kachizaka/actions/workflows/ci.yml/badge.svg)](https://github.com/krizaka/kachizaka/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/krizaka/kachizaka/badge)](https://scorecard.dev/viewer/?uri=github.com/krizaka/kachizaka)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=krizaka_kachizaka&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=krizaka_kachizaka)
 
-## What is in it (and where the truth stays)
+## What is here
 
-| Piece | Here | Truth |
-| --- | --- | --- |
-| CI | `.github/workflows/ci.yml` (≈10 lines) | `krizaka/.github` `node-ci.yml` |
-| Dependabot auto-merge, scorecard | thin workflows | `krizaka/.github` |
-| Deploy | `.krizaka-deploy.json`, `deploy/digitalocean/app.yaml` (www rule, no route list) | `krizaka-deploy` in `krizaka/.github/deploy` |
-| SEO family | `scripts/check-seo-family.mjs` | identical copy, org contract |
-| Static rules | `rules/`, `rule-tests/`, `sgconfig.yml`, `scripts/sg-*.mjs`, `sg-ratchet.json` (all 0) | copies of the org's; keep identical |
-| Env | `apps/web/lib/env.ts` (zod, bounded contexts) + test | krizaka-com AGENTS §5 |
-| i18n | `lib/i18n.ts`, `messages/{en,fr}.json` | `@krizaka/i18n` |
-| UI | `@krizaka/ui`, `tailwind`, `tokens`, `fonts` | published packages |
-| Dev host / DO routes | `lib/dev-host.ts`, `proxy.ts` (+ tests) | ADR in `ci-and-deploy.md` |
-| dev-preview | `dev-preview.json` (every criterion a gap) | `docs/standards/dev-preview.md` |
+Today, one thing: the **coming-soon page** of `www.kridoc.com` (`apps/web`), French by default and English, built with
+`@krizaka/ui` and `@krizaka/fonts`, in both themes. It says what Kridoc is in one line, that it is in design, and links back to
+[krizaka.com](https://www.krizaka.com). It holds no customer data.
 
-Not in it, on purpose: a database, auth, mail, maps, mobile — add them from the product that already does it.
+The product's code arrives here once its scope is decided. krizaka.com shows Kridoc as a card « En conception » / « In design ».
 
-## Drift
+## Commands
 
-The files marked « copy » are the only duplication left; `scripts/check-template-drift.mjs` compares them with the org's source
-(`node scripts/check-template-drift.mjs`) and the template's CI runs it weekly. Moving them into `@krizaka/config` is the end state.
+```bash
+pnpm install
+pnpm check      # lint (ESLint, i18n, ast-grep ratchet), typecheck, tests
+pnpm build
+```
+
+## How it is built
+
+Started from [`krizaka/template-next-app`](https://github.com/krizaka/template-next-app): the pipeline is the org's reusable
+workflows (`.github/workflows/ci.yml` only wires them), the SEO contract is `scripts/check-seo-family.mjs` (an identical copy in
+every Krizaka site), and the rules for agents are in [AGENTS.md](AGENTS.md) and [docs/agents.md](docs/agents.md).
+
+## Licence
+
+The code of this repository (the coming-soon site) is under the [Apache License 2.0](LICENSE). Kridoc's trademarks:
+[TRADEMARKS](https://github.com/krizaka/.github/blob/main/TRADEMARKS.md).

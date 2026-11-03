@@ -1,47 +1,49 @@
-# __Product__ — agent contract
+# kachizaka — agent contract
 
-Started from `krizaka/template-next-app`. The governance of the family is **krizaka-com's AGENTS.md** (theming with `var(--kz-*)`,
-every string in `messages/*.json`, `@krizaka/ui` blocks, tests with every change, definition of done) — read it, do not copy it here.
+<!-- krizaka-agents-template v1: rendered from krizaka/.github docs/standards/agents-template.md (scripts/agents-md.mjs). Keep every heading; the conformance check « agents-template » reads them. Repository detail goes to docs/agents.md, not here. -->
 
-- Shared things stay shared: the pipeline is `krizaka/.github` reusable workflows (`ci.yml` only wires it), deploys go through
-  `krizaka-deploy`, the SEO contract is `scripts/check-seo-family.mjs` (identical copy in every site), the ast-grep rules and ratchet
-  are the org's (`rules/`, `sgconfig.yml`, `scripts/sg-ratchet.mjs`: **do not edit them here**, change them in the template and in the org).
-- **DO routes**: the spec lists no route one by one (App Platform has no regex): one `/` per component; fine routing is code in the
-  app (`lib/dev-host.ts`, `proxy.ts`) with tests.
-- Environment variables are declared once in `apps/web/lib/env.ts`, named by bounded context.
-- `dev-preview.json` is data: `devPreview` is claimed only when every criterion has fresh evidence.
+Kridoc's coming-soon site (www.kridoc.com); Kridoc, Krizaka's document storage, is in design.
 
-## 9. Anti-slop (ADR-015)
+## Profile
 
-What a model tends to write and the code does not need. Each line points at the rule that refuses it
-([ADR-015](https://github.com/krizaka/.github/blob/main/docs/adr/ADR-015-ai-code-audit-measured-and-enforced.md), [docs/standards/guards.md](https://github.com/krizaka/.github/blob/main/docs/standards/guards.md)).
+- Kind: `site` · team: `krizaka` · registry entry: [repos.json](https://github.com/krizaka/.github/blob/main/repos.json)
+- Org standards: [docs/standards](https://github.com/krizaka/.github/tree/main/docs/standards) of krizaka/.github
 
-1. **No defensive null on `@NullMarked` code.** No `Objects.requireNonNull` or `if (x == null)` on a value the type already
-   guarantees. Enforced by NullAway at compile time; a new package is `@NullMarked` (ArchUnit).
-2. **A closed set is a type.** An enum, a sealed interface or an `as const` object, never a string compared by hand;
-   strategies are a `Map<Kind, Strategy>` built once at startup. Enforced by PMD / ArchUnit (Java) and `no-enum-string-compare` (ast-grep).
-3. **HTTP in Java is a DTO record, `@Valid` and `ProblemDetail`.** No `Map.of("error", …)`, no entity in a response, one
-   `@RestControllerAdvice` per service. Enforced by ArchUnit.
-4. **No `*Utils`, `*Helper` or `*Manager`.** Name the thing by what it does (§4). Enforced by ArchUnit (ADR-015 §5).
-5. **`?.` and `??` in TypeScript**, not a chain of `&&` or a ternary on null. The target rules are `@typescript-eslint/prefer-optional-chain` and `prefer-nullish-coalescing`; they are not in `@krizaka/config` yet.
-6. **The build is the judge.** Compile, lint and test before every push; `krizaka-edit-check` runs on each edit (below) and
-   NullAway and ArchUnit run at pre-push and in CI. A rule is never silenced to get green.
+## Commands
 
-**The edit hook.** Every repository adds this to `.claude/settings.json`. After each `Edit` or `Write`, the one file is
-checked in under 10 s: ESLint with the repository's config for TypeScript, PMD with the Krizaka rules for Java (never Maven).
-A finding comes back to the agent (exit 2); a timeout is silent.
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [{ "type": "command", "command": "npx --yes -p @krizaka/config krizaka-edit-check", "timeout": 10 }]
-      }
-    ]
-  }
-}
+```bash
+npm run format
+npm run lint
+npm run typecheck
+npm run test
+npm run build
 ```
 
-In a TypeScript repository that already depends on `@krizaka/config`, use `npx --no-install krizaka-edit-check` (no download).
+## Read first
+
+- **How we write code**: the [krizaka-engineering skill](https://github.com/krizaka/krizaka-skills/blob/main/skills/krizaka-engineering/SKILL.md)
+  — architecture, the library-first lookup, the « before you code » and « before you push » checklists. Its
+  [packages reference](https://github.com/krizaka/krizaka-skills/blob/main/skills/krizaka-engineering/references/packages.md)
+  lists what every `@krizaka/*` package exports: search it before writing anything generic.
+- **This repository in detail**: [docs/agents.md](docs/agents.md) — read the section of what you touch.
+
+## The 10 rules that matter (Anti-slop, ADR-015)
+
+1. **Libraries first.** A size check, a date sum, a money format, a fetch, a retry, a rate limit, a validation regex
+   come from `@krizaka/*`; a missing function goes into the package first, never a local copy.
+2. **Ports and adapters.** Domain code reads no env, no ambient clock, no database client; services talk to ports;
+   route handlers are thin (authenticate, parse, one service call, map the result).
+3. **One job per function.** Cognitive complexity ≤ 15, nesting ≤ 2, a body under 60 lines; a form saves once.
+4. **No duplication.** The same block twice is a function; in two repositories, a package function.
+5. **Data before code.** Limits, prices, durations and flags are settings an administrator changes, not constants.
+6. **A closed set is a type** (`as const` object, Java enum or sealed interface), never strings compared by hand.
+7. **Errors are typed** with a stable code and mapped to HTTP once; user messages come from the catalogues.
+8. **Names by function** (`media-store.ts`, never `postgres.ts`, `utils`, `helpers`, `manager`).
+9. **A fix starts with a failing test**, and every bug gets its guard; the journey (end-to-end) proves the feature.
+10. **The checks are the judge.** No `--no-verify`, no new `eslint-disable`, no raised ratchet or baseline.
+
+## Before you push
+
+- [ ] The « before you push » checklist of the skill holds for what changed.
+- [ ] The commands above are green locally on what changed; CI runs the rest.
+- [ ] README and generated docs still say what the code does.
