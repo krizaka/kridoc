@@ -44,3 +44,14 @@ every Krizaka site), and the rules for agents are in [AGENTS.md](AGENTS.md) and 
 
 The code of this repository (the coming-soon site) is under the [Apache License 2.0](LICENSE). Kridoc's trademarks:
 [TRADEMARKS](https://github.com/krizaka/.github/blob/main/TRADEMARKS.md).
+
+## Deploys
+
+A release train, as krizaka-com runs it: release-please keeps one « chore: release » pull request; merging it tags `vX.Y.Z`, and
+`production.yml` fast-forwards the `production` branch to the tag (`scripts/promote-production.mjs`, never forced, never backwards).
+The App Platform app `kachizaka` (`.do/app.yaml`, www.kridoc.com) deploys from `production`, never from `main`.
+
+## Layout
+
+As Yomizaka and Akinaza: `apps/web` (this site), room kept for `apps/mobile` (Expo) and `apps/desktop` (Tauri) and for `packages/*`
+(the workspace is `apps/*` + `packages/*`). Mobile and desktop come once the design phase sets their scope (krizaka-internal#1916).

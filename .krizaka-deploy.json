@@ -1,9 +1,9 @@
 {
-  "app": "kachizaka-site",
+  "app": "kachizaka",
   "url": "https://www.kridoc.com",
   "health": "/api/healthz",
   "indexing": "on",
-  "spec": "deploy/digitalocean/app.yaml",
+  "spec": ".do/app.yaml",
   "product": "kachizaka",
   "waitMinutes": 25
 }
