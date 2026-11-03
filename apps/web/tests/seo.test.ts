@@ -36,3 +36,17 @@ describe("the family SEO contract", () => {
     expect(JSON.stringify(siteJsonLd("en"))).toContain("https://www.krizaka.com/#organization");
   });
 });
+
+describe("a site for a product in design", () => {
+  it("is French by default for search engines (x-default) and points every card at the drawn image", () => {
+    const meta = pageMetadata("fr");
+    expect(meta.alternates?.languages).toMatchObject({ "x-default": `${SITE_URL}/fr` });
+    expect(JSON.stringify(meta.openGraph?.images)).toContain(`${SITE_URL}/og.png`);
+    expect(SITE_URL).toBe("https://www.kridoc.com");
+  });
+  it("declares a WebSite published by Krizaka, and no software: nothing is built yet", () => {
+    const graph = siteJsonLd("fr")["@graph"];
+    expect(graph.map((n) => n["@type"])).toEqual(["WebSite"]);
+    expect(graph[0].publisher["@id"]).toBe("https://www.krizaka.com/#organization");
+  });
+});

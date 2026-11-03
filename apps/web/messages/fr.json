@@ -2,7 +2,17 @@
   "meta": {
     "siteName": "Kridoc",
     "titleTemplate": "{title} · Kridoc",
-    "description": "Kridoc — créé à partir du modèle Next.js de Krizaka."
+    "description": "Kridoc est le stockage documentaire de Krizaka. Il est en conception : nous précisons le besoin et le périmètre avant de le construire."
   },
-  "home": { "title": "Kridoc", "lead": "Remplacez cette page : c'est le point de départ du modèle." }
+  "home": {
+    "title": "Kridoc",
+    "lead": "Le stockage documentaire de Krizaka.",
+    "status": "En conception",
+    "body": "Nous précisons le besoin et le périmètre avant de le construire. Rien n'est encore offert.",
+    "back": "Retour à krizaka.com",
+    "backAria": "Retour à krizaka.com, le site de l'entreprise Krizaka",
+    "byline": "Un produit Krizaka",
+    "language": "Langue",
+    "theme": "Thème"
+  }
 }

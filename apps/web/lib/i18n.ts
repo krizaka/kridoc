@@ -9,6 +9,6 @@ export type Messages = typeof en;
 export type MessageKey = KeyOf<Messages>;
 export const LOCALES: readonly Locale[] = ["en", "fr"];
 
-export const i18n = createI18n<Messages, Locale>({ en, fr }, { defaultLocale: "en" });
+export const i18n = createI18n<Messages, Locale>({ en, fr }, { defaultLocale: "fr" });
 export const { getDictionary, asLocale } = i18n;
 export { format } from "@krizaka/i18n";
