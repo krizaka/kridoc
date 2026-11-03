@@ -1,4 +1,4 @@
-# __Product__ web — production image: the Next.js standalone server (apps/web). Built by App Platform from deploy/digitalocean/app.yaml.
+# Kridoc web — production image: the Next.js standalone server (apps/web). Built by App Platform from deploy/digitalocean/app.yaml.
 FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS base
 RUN apk add --no-cache libc6-compat && corepack enable
 WORKDIR /app
@@ -19,7 +19,7 @@ ENV NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production
 ARG APP_COMMIT_SHA
 ARG APP_SEARCH_INDEXING
 ENV APP_COMMIT_SHA=$APP_COMMIT_SHA APP_SEARCH_INDEXING=$APP_SEARCH_INDEXING
-RUN pnpm --filter @__PRODUCT__/web build
+RUN pnpm --filter @kachizaka/web build
 
 # 3. Run
 FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS runner

@@ -25,6 +25,6 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/((?!api|_next/static|_next/image|.*\\..*).*)",
-    { source: "/:path*", has: [{ type: "host", value: "dev.__PRODUCT__.com" }] },
+    { source: "/:path*", has: [{ type: "host", value: "dev.kachizaka.com" }] },
   ],
 };
