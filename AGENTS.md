@@ -19,6 +19,10 @@ npm run test
 npm run build
 ```
 
+## Private repository: no scheduled CI
+
+This repository is private and pays for its minutes (founder, 2026-11-04, krizaka-internal#2364): no `schedule:` trigger. Template drift runs on demand (`workflow_dispatch`); everything else runs on pull requests and merges.
+
 ## Read first
 
 - **How we write code**: the [krizaka-engineering skill](https://github.com/krizaka/krizaka-skills/blob/main/skills/krizaka-engineering/SKILL.md)
