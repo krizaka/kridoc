@@ -5,3 +5,7 @@ onlyBuiltDependencies:
   - esbuild
   - sharp
   - unrs-resolver
+
+# Security pins for vulnerable transitive deps that Dependabot cannot move (a parent pins the major).
+overrides:
+  "minimatch@>=7.0.0 <11.0.1": "11.0.4" # GHSA-g3hv-75wg-m249: no fix before 11 (via eslint, typescript-eslint)
