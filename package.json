@@ -1,11 +1,11 @@
 {
-  "name": "kachizaka-monorepo",
+  "name": "kridoc-monorepo",
   "version": "0.2.2",
   "private": true,
   "description": "Kridoc — started from krizaka/template-next-app.",
   "packageManager": "pnpm@10.34.6",
   "scripts": {
-    "dev": "turbo run dev --filter=@kachizaka/web",
+    "dev": "turbo run dev --filter=@kridoc/web",
     "build": "turbo run build",
     "lint:workspace": "npx --yes -p @krizaka/config@latest krizaka-workspace-guard",
     "lint": "pnpm run lint:workspace && turbo run lint && pnpm run check:i18n && krizaka-sg-ratchet && pnpm run format:check",

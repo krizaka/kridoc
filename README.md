@@ -7,13 +7,13 @@
 
 # Kridoc
 
-> **Kridoc by Krizaka** is the commercial name; `kachizaka` is the code name (repository, packages, ids). Visitors read Kridoc
-> everywhere (the catalogues `apps/web/messages/*.json`); a test fails on the code name in a rendered word.
+> **Kridoc by Krizaka**: one name everywhere, the repository, the packages, the ids and every word a visitor reads (the catalogues
+> `apps/web/messages/*.json`). The former code name is history only (krizaka-internal#2659); a test fails if it comes back in a rendered word.
 
 **Status: in design.** Kridoc is Krizaka's document storage. Its need and scope are being settled; nothing is built or offered
 yet: no sign-up, no waiting list, no date.
 
-[![CI](https://github.com/krizaka/kachizaka/actions/workflows/ci.yml/badge.svg)](https://github.com/krizaka/kachizaka/actions/workflows/ci.yml)
+[![CI](https://github.com/krizaka/kridoc/actions/workflows/ci.yml/badge.svg)](https://github.com/krizaka/kridoc/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 ## What is here
@@ -47,9 +47,9 @@ The code of this repository (the coming-soon site) is under the [Apache License 
 
 A release train, as krizaka-com runs it: release-please keeps one « chore: release » pull request; merging it tags `vX.Y.Z`, and
 `production.yml` fast-forwards the `production` branch to the tag (`scripts/promote-production.mjs`, never forced, never backwards).
-The App Platform app `kachizaka` (`.do/app.yaml`, www.kridoc.com) deploys from `production`, never from `main`.
+The App Platform app `kridoc` (`.do/app.yaml`, www.kridoc.com) deploys from `production`, never from `main`.
 
 ## Layout
 
-As Yomizaka and Akinaza: `apps/web` (this site), room kept for `apps/mobile` (Expo) and `apps/desktop` (Tauri) and for `packages/*`
+As Verikora and Folioviv: `apps/web` (this site), room kept for `apps/mobile` (Expo) and `apps/desktop` (Tauri) and for `packages/*`
 (the workspace is `apps/*` + `packages/*`). Mobile and desktop come once the design phase sets their scope (krizaka-internal#1916).

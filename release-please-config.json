@@ -17,6 +17,6 @@
     { "type": "refactor", "section": "Refactoring", "hidden": true }
   ],
   "packages": {
-    ".": { "release-type": "node", "package-name": "kachizaka", "changelog-path": "CHANGELOG.md" }
+    ".": { "release-type": "node", "package-name": "kridoc", "changelog-path": "CHANGELOG.md" }
   }
 }
