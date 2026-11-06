@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/krizaka/kachizaka/compare/v0.2.1...v0.2.2) (2026-11-06)
+
+
+### Bug Fixes
+
+* **pages:** « Nous écrire » and « Nos produits », the canonical line, no jargon ([#2629](https://github.com/krizaka/kachizaka/issues/2629)) ([#13](https://github.com/krizaka/kachizaka/issues/13)) ([bebccde](https://github.com/krizaka/kachizaka/commit/bebccde62038fc84556061d2d610fb13517b74c2))
+
 ## [0.2.1](https://github.com/krizaka/kachizaka/compare/v0.2.0...v0.2.1) (2026-11-05)
 
 
