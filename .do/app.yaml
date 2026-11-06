@@ -1,16 +1,19 @@
-# Kridoc (code name kachizaka) - DigitalOcean App Platform (TOR1), a Next.js service: www.kridoc.com (krizaka-internal#2301, founder 2026-11-03:
+# Kridoc - DigitalOcean App Platform (TOR1), a Next.js service: www.kridoc.com (krizaka-internal#2301, founder 2026-11-03:
 # a real web app from day one, the coming-soon page is its stable face and the product is built behind it).
 # The app deploys from `production`, never from main: a published release fast-forwards it to the tag (.github/workflows/production.yml).
 # Created by the CTO from this file; nothing here is applied by an agent. Secrets (none yet) are DO SECRETs filled at apply time.
 #
 # ROUTES: App Platform's ingress match is prefix/exact only - NO regex. The apex answers 308 with www (the family's www rule,
 # krizaka/.github#119) and everything else goes to the one component; the fine routing is the app's (proxy.ts).
-name: kachizaka
+name: kridoc
 region: tor
 domains:
   - domain: www.kridoc.com
     type: PRIMARY
   - domain: kridoc.com
+    type: ALIAS
+  # The development address (krizaka-internal#2659): the same app, so dev.kridoc.com answers until a dev deployment of its own exists.
+  - domain: dev.kridoc.com
     type: ALIAS
 alerts:
   - rule: DEPLOYMENT_FAILED
@@ -31,7 +34,7 @@ ingress:
 services:
   - name: web
     github:
-      repo: krizaka/kachizaka
+      repo: krizaka/kridoc
       branch: production
       deploy_on_push: true
     dockerfile_path: deploy/docker/Dockerfile

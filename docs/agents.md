@@ -1,4 +1,4 @@
-# kachizaka — detail for agents
+# kridoc — detail for agents
 
 Moved here from AGENTS.md when it took the org template (krizaka/.github `docs/standards/agents-template.md`). AGENTS.md is the short contract; this page is the repository's own detail, read by section.
 

@@ -138,7 +138,7 @@ test("the workflows: release-please pinned, production on release published, nev
 
 test("the spec: a service on App Platform that deploys from production, www primary, the apex answering 308", () => {
   const spec = read(".do/app.yaml");
-  assert.match(spec, /^name: kachizaka$/m);
+  assert.match(spec, /^name: kridoc$/m);
   assert.match(spec, /^region: tor$/m);
   assert.match(spec, /branch: production\n/);
   assert.doesNotMatch(spec, /branch: main/);

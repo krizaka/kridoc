@@ -1,4 +1,4 @@
-# kachizaka — agent contract
+# kridoc — agent contract
 
 <!-- krizaka-agents-template v1: rendered from krizaka/.github docs/standards/agents-template.md (scripts/agents-md.mjs). Keep every heading; the conformance check « agents-template » reads them. Repository detail goes to docs/agents.md, not here. -->
 

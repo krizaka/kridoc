@@ -1,53 +1,53 @@
 {
   "$schema": "https://raw.githubusercontent.com/krizaka/.github/main/docs/standards/dev-preview.schema.json",
   "version": 1,
-  "product": "kachizaka",
+  "product": "kridoc",
   "index": "off",
   "criteria": {
     "site.healthy": {
       "evidence": null,
       "gap": "Not yet checked: fill with a fresh evidence URL, or a justified na (docs/standards/dev-preview.md).",
-      "issue": "https://github.com/krizaka/kachizaka/issues"
+      "issue": "https://github.com/krizaka/kridoc/issues"
     },
     "ui.krizaka-ui": {
       "evidence": null,
       "gap": "Not yet checked: fill with a fresh evidence URL, or a justified na (docs/standards/dev-preview.md).",
-      "issue": "https://github.com/krizaka/kachizaka/issues"
+      "issue": "https://github.com/krizaka/kridoc/issues"
     },
     "ui.themes-devices": {
       "evidence": null,
       "gap": "Not yet checked: fill with a fresh evidence URL, or a justified na (docs/standards/dev-preview.md).",
-      "issue": "https://github.com/krizaka/kachizaka/issues"
+      "issue": "https://github.com/krizaka/kridoc/issues"
     },
     "quality.ci-green": {
       "evidence": null,
       "gap": "Not yet checked: fill with a fresh evidence URL, or a justified na (docs/standards/dev-preview.md).",
-      "issue": "https://github.com/krizaka/kachizaka/issues"
+      "issue": "https://github.com/krizaka/kridoc/issues"
     },
     "quality.tests": {
       "evidence": null,
       "gap": "Not yet checked: fill with a fresh evidence URL, or a justified na (docs/standards/dev-preview.md).",
-      "issue": "https://github.com/krizaka/kachizaka/issues"
+      "issue": "https://github.com/krizaka/kridoc/issues"
     },
     "security.alerts": {
       "evidence": null,
       "gap": "Not yet checked: fill with a fresh evidence URL, or a justified na (docs/standards/dev-preview.md).",
-      "issue": "https://github.com/krizaka/kachizaka/issues"
+      "issue": "https://github.com/krizaka/kridoc/issues"
     },
     "docs.current": {
       "evidence": null,
       "gap": "Not yet checked: fill with a fresh evidence URL, or a justified na (docs/standards/dev-preview.md).",
-      "issue": "https://github.com/krizaka/kachizaka/issues"
+      "issue": "https://github.com/krizaka/kridoc/issues"
     },
     "seo.family": {
       "evidence": null,
       "gap": "Not yet checked: fill with a fresh evidence URL, or a justified na (docs/standards/dev-preview.md).",
-      "issue": "https://github.com/krizaka/kachizaka/issues"
+      "issue": "https://github.com/krizaka/kridoc/issues"
     },
     "ops.cost": {
       "evidence": null,
       "gap": "Not yet checked: fill with a fresh evidence URL, or a justified na (docs/standards/dev-preview.md).",
-      "issue": "https://github.com/krizaka/kachizaka/issues"
+      "issue": "https://github.com/krizaka/kridoc/issues"
     }
   }
 }
