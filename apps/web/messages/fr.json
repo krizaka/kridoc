@@ -2,17 +2,19 @@
   "meta": {
     "siteName": "Kridoc",
     "titleTemplate": "{title} · Kridoc",
-    "description": "Kridoc est le stockage documentaire de Krizaka. Il est en conception : nous précisons le besoin et le périmètre avant de le construire."
+    "description": "Kridoc : vos documents d'entreprise, rangés et retrouvés. En conception : nous précisons le besoin et le périmètre avant de le construire."
   },
   "home": {
     "title": "Kridoc",
-    "lead": "Le stockage documentaire de Krizaka.",
+    "lead": "Vos documents d'entreprise, rangés et retrouvés.",
     "status": "En conception",
     "body": "Nous précisons le besoin et le périmètre avant de le construire. Rien n'est encore offert.",
-    "back": "Retour à krizaka.com",
-    "backAria": "Retour à krizaka.com, le site de l'entreprise Krizaka",
     "byline": "Un produit Krizaka",
     "language": "Langue",
-    "theme": "Thème"
+    "theme": "Thème",
+    "contact": "Nous écrire",
+    "contactAria": "Écrire à Krizaka à propos de Kridoc (le formulaire, en français)",
+    "products": "Nos produits",
+    "productsAria": "Les produits Krizaka sur krizaka.com (en français)"
   }
 }

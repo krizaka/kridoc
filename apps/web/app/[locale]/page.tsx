@@ -11,7 +11,7 @@ import { ThemeToggle } from "@krizaka/ui/theme";
 
 import { getDictionary, type Locale, LOCALES } from "@/lib/i18n";
 import { siteJsonLd } from "@/lib/seo";
-import { KRIZAKA_URL } from "@/lib/site";
+import { contactUrl, productsUrl } from "@/lib/site";
 
 export default async function Home({ params }: Readonly<{ params: Promise<{ locale: string }> }>) {
   const locale = (await params).locale as Locale;
@@ -35,11 +35,18 @@ export default async function Home({ params }: Readonly<{ params: Promise<{ loca
         <p className="max-w-xl text-xl text-fg-secondary">{t.home.lead}</p>
         <Stamp tone="neutral">{t.home.status}</Stamp>
         <p className="max-w-xl text-fg-secondary">{t.home.body}</p>
-        <Button asChild variant="secondary" size="lg">
-          <a href={KRIZAKA_URL} aria-label={t.home.backAria}>
-            {t.home.back}
-          </a>
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button asChild variant="primary" size="lg">
+            <a href={contactUrl(locale)} aria-label={t.home.contactAria}>
+              {t.home.contact}
+            </a>
+          </Button>
+          <Button asChild variant="secondary" size="lg">
+            <a href={productsUrl(locale)} aria-label={t.home.productsAria}>
+              {t.home.products}
+            </a>
+          </Button>
+        </div>
       </main>
     </Page>
   );
