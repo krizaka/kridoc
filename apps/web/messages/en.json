@@ -2,17 +2,19 @@
   "meta": {
     "siteName": "Kridoc",
     "titleTemplate": "{title} · Kridoc",
-    "description": "Kridoc is Krizaka's document storage. It is in design: we are settling the need and the scope before we build it."
+    "description": "Kridoc: your company documents, filed and found. In design: we are settling the need and the scope before we build it."
   },
   "home": {
     "title": "Kridoc",
-    "lead": "Krizaka's document storage.",
+    "lead": "Your company documents, filed and found.",
     "status": "In design",
     "body": "We are settling the need and the scope before we build it. Nothing is offered yet.",
-    "back": "Back to krizaka.com",
-    "backAria": "Back to krizaka.com, the Krizaka company site",
     "byline": "A Krizaka product",
     "language": "Language",
-    "theme": "Theme"
+    "theme": "Theme",
+    "contact": "Write to us",
+    "contactAria": "Write to Krizaka about Kridoc (the form, in English)",
+    "products": "Our products",
+    "productsAria": "Krizaka's products on krizaka.com (in English)"
   }
 }
