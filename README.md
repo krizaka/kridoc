@@ -38,6 +38,8 @@ Started from [`krizaka/template-next-app`](https://github.com/krizaka/template-n
 workflows (`.github/workflows/ci.yml` only wires them), the SEO contract is `scripts/check-seo-family.mjs` (an identical copy in
 every Krizaka site), and the rules for agents are in [AGENTS.md](AGENTS.md) and [docs/agents.md](docs/agents.md).
 
+
+<!-- krizaka:workflows:start -->
 ## Workflows
 
 What runs in the Actions tab of this repository.
@@ -49,6 +51,7 @@ What runs in the Actions tab of this repository.
 - **Promote to production** (`production.yml`): Fast-forwards the production branch to the release tag. Runs when a release is published, on demand.
 - **Release PR** (`release-please.yml`): Keeps one release PR open from the merged commits; its merge tags the release. Runs on push.
 - **Security scan** (`security.yml`): Secret scan (gitleaks) and workflow scan (zizmor); both are required checks. Runs on every pull request, in the merge queue, on push.
+<!-- krizaka:workflows:end -->
 
 ## Licence
 
