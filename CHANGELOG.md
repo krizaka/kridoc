@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/krizaka/kridoc/compare/v0.2.2...v0.2.3) (2026-11-08)
+
+
+### Bug Fixes
+
+* **ci:** run CI on pull_request and merge_group only, not on push to main ([#22](https://github.com/krizaka/kridoc/issues/22)) ([7cf2058](https://github.com/krizaka/kridoc/commit/7cf20584551a30b7c9fa454fd14ffc2a4d8d7c87))
+* **main:** the image takes Alpine's security fixes at build (CVE-2026-85091 in zlib) ([#17](https://github.com/krizaka/kridoc/issues/17)) ([cf6a73d](https://github.com/krizaka/kridoc/commit/cf6a73dd404f8c3165aaf8e3db2bdc550e0ee001))
+
 ## [0.2.2](https://github.com/krizaka/kachizaka/compare/v0.2.1...v0.2.2) (2026-11-06)
 
 
