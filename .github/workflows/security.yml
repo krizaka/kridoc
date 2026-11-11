@@ -14,7 +14,7 @@ permissions: {}
 jobs:
   security:
     name: Security scan
-    uses: krizaka/.github/.github/workflows/security-scan.yml@6e7d45107f720fa3e4523d52849088c379c3382c # main
+    uses: krizaka/.github/.github/workflows/security-scan.yml@31d45bcdde30a7dfc66ddb15bcb280f11b16faac # main
     with:
       runs-on: '["self-hosted","macOS","krizaka"]' # private repository only, krizaka-internal#2939: the scan runs on the Mac runner
     permissions:
