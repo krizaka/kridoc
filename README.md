@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://krizaka-assets.b-cdn.net/brand/kachizaka/logo-dark.svg">
-    <img src="https://krizaka-assets.b-cdn.net/brand/kachizaka/logo-light.svg" alt="Kridoc" width="96">
+    <source media="(prefers-color-scheme: dark)" srcset="https://krizaka-assets.b-cdn.net/brand/kridoc/logo-dark.svg">
+    <img src="https://krizaka-assets.b-cdn.net/brand/kridoc/logo-light.svg" alt="Kridoc" width="96">
   </picture>
 </p>
 
