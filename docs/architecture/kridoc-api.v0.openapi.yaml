@@ -334,7 +334,12 @@ components:
       properties:
         class: { $ref: "#/components/schemas/RetentionClass" }
         days: { type: integer, minimum: 1 }
-        purgeAfter: { type: [string, "null"], format: date-time, description: Null until the event the class waits for has happened. }
+        purgeAfter:
+          {
+            type: [string, "null"],
+            format: date-time,
+            description: Null until the event the class waits for has happened.,
+          }
     SpaceRef:
       type: object
       required: [tenant, user]
@@ -404,7 +409,8 @@ components:
           type: object
           required: [label, region]
           properties:
-            label: { type: string, enum: [canada, elsewhere, unknown], description: The label of the opened store (TS-006). }
+            label:
+              { type: string, enum: [canada, elsewhere, unknown], description: The label of the opened store (TS-006). }
             region: { type: [string, "null"] }
         key:
           type: object
@@ -412,7 +418,8 @@ components:
           properties:
             hint: { type: string }
             status: { type: string, enum: [active, rotated, expired, revoked] }
-            scopes: { type: array, items: { type: string, enum: [spaces:read, spaces:write, spaces:delete, spaces:export] } }
+            scopes:
+              { type: array, items: { type: string, enum: [spaces:read, spaces:write, spaces:delete, spaces:export] } }
             lastUsedAt: { type: [string, "null"], format: date-time }
     Problem:
       type: object
