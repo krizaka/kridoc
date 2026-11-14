@@ -57,7 +57,7 @@ export function pageMetadata(locale: Locale): Metadata {
   };
 }
 
-/** The site, published by Krizaka. No SoftwareApplication: Kridoc is in design, nothing is built or offered yet. */
+/** The site, published by Krizaka. No SoftwareApplication: Kridoc is in development and not open, nothing is offered yet. */
 export function siteJsonLd(locale: Locale) {
   const t = getDictionary(locale);
   return {
