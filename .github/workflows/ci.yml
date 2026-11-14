@@ -24,7 +24,12 @@ jobs:
       typecheck-script: typecheck
       next-cache-paths: apps/web/.next/cache
       after-build: scripts/ci-after-build.sh
+      # SonarCloud CI analysis with the coverage of apps/web (krizaka-internal#3553); the CTO turns Automatic Analysis off.
+      sonar: true
+      sonar-coverage-paths: apps/web/coverage/lcov.info
       ignore: '^docs/|^\.changeset/|^(LICENSE|SECURITY|CODE_OF_CONDUCT|SUPPORT)(\.md)?$|^\.github/(ISSUE_TEMPLATE/|assets/|pull_request_template\.md$|FUNDING\.yml$|dependabot\.yml$)'
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   # The job name is the required status check on main: kept by a shim that reads the gate's verdict.
   verify:
