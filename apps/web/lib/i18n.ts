@@ -7,7 +7,7 @@ import fr from "@/messages/fr.json";
 export type Locale = "en" | "fr";
 export type Messages = typeof en;
 export type MessageKey = KeyOf<Messages>;
-export const LOCALES: readonly Locale[] = ["en", "fr"];
+export const LOCALES: readonly Locale[] = ["fr", "en"];
 
 export const i18n = createI18n<Messages, Locale>({ en, fr }, { defaultLocale: "fr" });
 export const { getDictionary, asLocale } = i18n;

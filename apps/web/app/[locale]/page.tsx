@@ -1,53 +1,97 @@
-/* The coming-soon page of www.kridoc.com (founder, 2026-11-03, krizaka-internal#2143): Kridoc is in design. It says what Kridoc
-   is in one line, that it is being designed, and leads back to krizaka.com — no feature, no date, no sign-up, no waiting list.
-   Words: messages/<locale>.json (home.*); the mark is @krizaka/ui's; colours are tokens only. */
+/* The coming-soon page of www.kridoc.com (krizaka-internal#3595), shaped like krizaka-coming-soon's: Kridoc is in development, not
+   open. The mark, the name, its one line, its true stage, one sentence (not open, sign-up closed, write to us), one action; then the
+   family's footer. No feature, no date, no sign-up, no waiting list, no stock picture (the hero's `aside` stays empty until a reel exists).
+   Words: messages/<locale>.json; the contact page and the legal line: @krizaka/org; the mark and the blocks: @krizaka/ui. */
+import { org } from "@krizaka/org";
 import { KridocLogo } from "@krizaka/ui";
 import { Button } from "@krizaka/ui/button";
-import { LanguageSwitch } from "@krizaka/ui/language-switch";
 import { languagesFor } from "@krizaka/ui/language-switch/server";
-import { Page } from "@krizaka/ui/page";
+import { NavBarActions, NavBarBrand, NavBarItems, NavBarLanguage, NavBarLink, NavBarRoot } from "@krizaka/ui/nav-bar";
+import { PageHero } from "@krizaka/ui/page-hero";
+import { SiteFooter, SiteFooterColumn, SiteFooterLink } from "@krizaka/ui/site-footer";
+import { familyLabels } from "@krizaka/ui/sites";
 import { Stamp } from "@krizaka/ui/specimen-tag";
 import { ThemeToggle } from "@krizaka/ui/theme";
 
 import { getDictionary, type Locale, LOCALES } from "@/lib/i18n";
 import { siteJsonLd } from "@/lib/seo";
-import { contactUrl, productsUrl } from "@/lib/site";
+import { contactUrl, KRIZAKA_URL, productsUrl, releaseNotesUrl, REPO_URL } from "@/lib/site";
+
+type Dictionary = ReturnType<typeof getDictionary>;
+
+/** The bar: the mark, a plain link to krizaka.com (no family switcher), the language and the theme. */
+function Bar({ locale, t }: Readonly<{ locale: Locale; t: Dictionary }>) {
+  return (
+    <NavBarRoot label={t.home.navLabel} floating={false} compactAfter={false}>
+      <NavBarBrand href={`/${locale}/`}>
+        <KridocLogo size={24} title={t.home.title} />
+        {t.home.title}
+      </NavBarBrand>
+      <NavBarItems>
+        <NavBarLink href={`${KRIZAKA_URL}/${locale}`} aria-label={t.home.backAria}>
+          {t.home.back}
+        </NavBarLink>
+      </NavBarItems>
+      <NavBarActions>
+        <NavBarLanguage label={t.home.language} current={locale} languages={languagesFor(`/${locale}`, LOCALES)} />
+        <ThemeToggle label={t.home.theme} variant="ghost" />
+      </NavBarActions>
+    </NavBarRoot>
+  );
+}
+
+/* Follow-up #3562: the footer's links come from the org JSON (`footerFor`) once Kridoc is a site of it; `org` itself is not passed
+   to the client footer (47 KB of facts), only the legal links are read from it. */
+function FamilyFooter({ locale, t }: Readonly<{ locale: Locale; t: Dictionary }>) {
+  const legal = org.footer.legal.map((l) => (
+    <SiteFooterLink key={l.id} href={l.url[locale]}>
+      {l.label[locale]}
+    </SiteFooterLink>
+  ));
+  return (
+    <SiteFooter
+      current="krizaka"
+      family={false}
+      labels={familyLabels[locale]}
+      aria-label={t.footer.label}
+      legal={legal}
+    >
+      <SiteFooterColumn title={t.footer.label}>
+        <SiteFooterLink href={releaseNotesUrl(locale)} aria-label={t.footer.releaseNotesAria}>
+          {t.footer.releaseNotes}
+        </SiteFooterLink>
+        <SiteFooterLink href={REPO_URL} aria-label={t.footer.sourceAria}>
+          {t.footer.source}
+        </SiteFooterLink>
+        <SiteFooterLink href={productsUrl(locale)} aria-label={t.footer.productsAria}>
+          {t.footer.products}
+        </SiteFooterLink>
+      </SiteFooterColumn>
+    </SiteFooter>
+  );
+}
 
 export default async function Home({ params }: Readonly<{ params: Promise<{ locale: string }> }>) {
   const locale = (await params).locale as Locale;
   const t = getDictionary(locale);
   return (
-    <Page className="flex min-h-screen flex-col py-10">
+    <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd(locale)) }} />
-      <header className="flex items-center justify-end gap-3">
-        <LanguageSwitch
-          variant="inline"
-          label={t.home.language}
-          current={locale}
-          languages={languagesFor(`/${locale}`, LOCALES)}
-        />
-        <ThemeToggle label={t.home.theme} variant="ghost" />
-      </header>
-      <main className="flex flex-1 flex-col items-start justify-center gap-6 py-16">
-        <KridocLogo size={88} title={t.home.title} />
-        <p className="font-mono text-sm text-fg-muted">{t.home.byline}</p>
-        <h1 className="font-display text-5xl text-fg sm:text-6xl">{t.home.title}</h1>
-        <p className="max-w-xl text-xl text-fg-secondary">{t.home.lead}</p>
-        <Stamp tone="neutral">{t.home.status}</Stamp>
-        <p className="max-w-xl text-fg-secondary">{t.home.body}</p>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button asChild variant="primary" size="lg">
-            <a href={contactUrl(locale)} aria-label={t.home.contactAria}>
-              {t.home.contact}
-            </a>
-          </Button>
-          <Button asChild variant="secondary" size="lg">
-            <a href={productsUrl(locale)} aria-label={t.home.productsAria}>
-              {t.home.products}
-            </a>
-          </Button>
-        </div>
+      <Bar locale={locale} t={t} />
+      <main>
+        <PageHero align="start" backdrop="plain" eyebrow={t.home.byline} title={t.home.title} lead={t.home.lead}>
+          <div className="flex flex-col items-start gap-5">
+            <Stamp tone="wip">{t.home.status}</Stamp>
+            <p className="max-w-xl text-fg-secondary">{t.home.notOpen}</p>
+            <Button asChild variant="primary" size="lg">
+              <a href={contactUrl(locale)} aria-label={t.home.contactAria}>
+                {t.home.contact}
+              </a>
+            </Button>
+          </div>
+        </PageHero>
       </main>
-    </Page>
+      <FamilyFooter locale={locale} t={t} />
+    </>
   );
 }

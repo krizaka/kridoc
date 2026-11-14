@@ -37,7 +37,7 @@ describe("the family SEO contract", () => {
   });
 });
 
-describe("a site for a product in design", () => {
+describe("a site for a product in development", () => {
   it("is French by default for search engines (x-default) and points every card at the drawn image", () => {
     const meta = pageMetadata("fr");
     expect(meta.alternates?.languages).toMatchObject({ "x-default": `${SITE_URL}/fr` });

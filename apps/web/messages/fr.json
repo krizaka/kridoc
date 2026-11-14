@@ -2,18 +2,28 @@
   "meta": {
     "siteName": "Kridoc",
     "titleTemplate": "{title} · Kridoc",
-    "description": "Kridoc : vos documents d'entreprise, rangés et retrouvés. En conception : nous précisons le besoin et le périmètre avant de le construire."
+    "description": "Kridoc : vos documents d'entreprise, rangés et retrouvés. En développement : pas encore ouvert."
   },
   "home": {
     "title": "Kridoc",
     "lead": "Vos documents d'entreprise, rangés et retrouvés.",
-    "status": "En conception",
-    "body": "Nous précisons le besoin et le périmètre avant de le construire. Rien n'est encore offert.",
+    "status": "En développement",
     "byline": "Un produit Krizaka",
     "language": "Langue",
     "theme": "Thème",
     "contact": "Nous écrire",
     "contactAria": "Écrire à Krizaka à propos de Kridoc (le formulaire, en français)",
+    "notOpen": "Pas encore ouvert. Inscriptions fermées. Une question, un besoin ? Écrivez-nous.",
+    "navLabel": "Navigation principale",
+    "back": "Krizaka",
+    "backAria": "Retour sur krizaka.com (en français)"
+  },
+  "footer": {
+    "label": "Pied de page",
+    "releaseNotes": "Journal des versions",
+    "releaseNotesAria": "Le journal des versions de Kridoc sur krizaka.com (en français)",
+    "source": "Code source",
+    "sourceAria": "Le code source de Kridoc sur GitHub",
     "products": "Nos produits",
     "productsAria": "Les produits Krizaka sur krizaka.com (en français)"
   }

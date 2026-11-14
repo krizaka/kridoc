@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { contactUrl, productsUrl } from "@/lib/site";
+import { LOCALES } from "@/lib/i18n";
+import { contactUrl, productsUrl, releaseNotesUrl } from "@/lib/site";
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 
@@ -14,15 +15,29 @@ describe("the links of the waiting page", () => {
     expect(contactUrl("en")).toBe("https://www.krizaka.com/en/contact?topic=kridoc&source=kridoc-com");
     expect(productsUrl("fr")).toBe("https://www.krizaka.com/fr#products");
     expect(productsUrl("en")).toBe("https://www.krizaka.com/en#products");
+    expect(releaseNotesUrl("fr")).toBe("https://www.krizaka.com/fr/changelog?produit=kridoc");
   });
-  it("are on the page, each once", () => {
+  it("are on the page, each once: the one action, and the footer's three links", () => {
     const page = readFileSync(new URL("../app/[locale]/page.tsx", import.meta.url), "utf8");
-    for (const href of ["contactUrl(locale)", "productsUrl(locale)"])
+    for (const href of ["contactUrl(locale)", "productsUrl(locale)", "releaseNotesUrl(locale)", "REPO_URL"])
       expect(page.split(`href={${href}}`).length - 1).toBe(1);
   });
-  it("say « Nous écrire » and « Nos produits »", () => {
-    expect([fr.home.contact, fr.home.products]).toEqual(["Nous écrire", "Nos produits"]);
-    expect([en.home.contact, en.home.products]).toEqual(["Write to us", "Our products"]);
+  it("say « Nous écrire », and the footer's « Journal des versions · Code source · Nos produits »", () => {
+    expect([fr.home.contact, fr.footer.releaseNotes, fr.footer.source, fr.footer.products]).toEqual([
+      "Nous écrire",
+      "Journal des versions",
+      "Code source",
+      "Nos produits",
+    ]);
+    expect([en.home.contact, en.footer.releaseNotes, en.footer.source, en.footer.products]).toEqual([
+      "Contact us",
+      "Release notes",
+      "Source code",
+      "Our products",
+    ]);
+  });
+  it("list French first: the first language is the default one", () => {
+    expect(LOCALES[0]).toBe("fr");
   });
   it("say the canonical line, without the jargon", () => {
     expect(fr.home.lead).toBe("Vos documents d'entreprise, rangés et retrouvés.");

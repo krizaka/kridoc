@@ -2,18 +2,28 @@
   "meta": {
     "siteName": "Kridoc",
     "titleTemplate": "{title} · Kridoc",
-    "description": "Kridoc: your company documents, filed and found. In design: we are settling the need and the scope before we build it."
+    "description": "Kridoc: your company documents, filed and found. In development: not open yet."
   },
   "home": {
     "title": "Kridoc",
     "lead": "Your company documents, filed and found.",
-    "status": "In design",
-    "body": "We are settling the need and the scope before we build it. Nothing is offered yet.",
+    "status": "In development",
     "byline": "A Krizaka product",
     "language": "Language",
     "theme": "Theme",
-    "contact": "Write to us",
+    "contact": "Contact us",
     "contactAria": "Write to Krizaka about Kridoc (the form, in English)",
+    "notOpen": "Not open yet. Sign-up closed. A question, a need? Write to us.",
+    "navLabel": "Main navigation",
+    "back": "Krizaka",
+    "backAria": "Back to krizaka.com (in English)"
+  },
+  "footer": {
+    "label": "Footer",
+    "releaseNotes": "Release notes",
+    "releaseNotesAria": "Kridoc's release notes on krizaka.com (in English)",
+    "source": "Source code",
+    "sourceAria": "Kridoc's source code on GitHub",
     "products": "Our products",
     "productsAria": "Krizaka's products on krizaka.com (in English)"
   }
