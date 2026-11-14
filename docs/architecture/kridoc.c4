@@ -1,8 +1,12 @@
 // Kridoc's containers, current and target (ORG-027, ORG-039). The service is K1's design (planned): nothing below `site` runs
 // today. Tenants and spaces are elements of the model. The contract of `api` is kridoc-api.v0.openapi.yaml; what K0 already
 // does for each operation is in README.md.
+//
+// `kridoc` is not yet a system of the org family (@krizaka/org), so this file declares it. When the family gains it, replace the
+// `kridoc = system` block by `extend kridoc` (ORG-039, migration plan).
 model {
-  extend kridoc {
+  kridoc = system 'Kridoc' {
+    description 'Business document storage: each app installation is a tenant, each user has one space per app, in Canada.'
     site = app 'Site' {
       description 'The coming-soon page today; the product site, sign-up and trust page at target.'
       technology 'Next.js, @krizaka/ui'
