@@ -47,3 +47,12 @@ A finding comes back to the agent (exit 2); a timeout is silent.
 ```
 
 In a TypeScript repository that already depends on `@krizaka/config`, use `npx --no-install krizaka-edit-check` (no download).
+
+## 10. Coverage and SonarCloud: excluded while the repository is private
+
+kridoc is a private repository (registry: `repos.json`) and SonarCloud's plan analyses public repositories only, so no
+analysis, hence no coverage measure, exists for it (krizaka-internal#3553, line « or is explicitly excluded with its
+reason »). The Sonar code rules run in `apps/web/eslint.config.mjs` instead, and the tests run in CI (`pnpm test`).
+When the repository opens: add `sonar-project.properties` as in folioviv (`sonar.javascript.lcov.reportPaths`,
+test files as `sonar.tests`), `@vitest/coverage-v8` with the `lcov` reporter in `apps/web/vitest.config.mts`, and the
+`sonar` inputs of the shared `node-ci.yml` in `.github/workflows/ci.yml`.
