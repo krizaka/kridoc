@@ -15,8 +15,8 @@ importers:
         specifier: 0.51.0
         version: 0.51.0
       '@krizaka/config':
-        specifier: ^0.20.0
-        version: 0.20.0(eslint-config-next@16.4.3(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(prettier@3.9.10)(typescript@5.9.3)
+        specifier: ^0.25.0
+        version: 0.25.0(eslint-config-next@16.4.3(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(prettier@3.9.10)(typescript@5.9.3)
       '@krizaka/i18n':
         specifier: ^0.2.4
         version: 0.2.4(react@19.3.1)(typescript@5.9.3)
@@ -70,8 +70,8 @@ importers:
         version: 4.6.7
     devDependencies:
       '@krizaka/config':
-        specifier: ^0.20.0
-        version: 0.20.0(eslint-config-next@16.4.3(@typescript-eslint/parser@8.72.0(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(prettier@3.9.10)(typescript@5.9.3)
+        specifier: ^0.25.0
+        version: 0.25.0(eslint-config-next@16.4.3(@typescript-eslint/parser@8.72.0(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(prettier@3.9.10)(typescript@5.9.3)
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
@@ -538,8 +538,8 @@ packages:
     peerDependencies:
       solid-js: ^1.8.8
 
-  '@krizaka/config@0.20.0':
-    resolution: {integrity: sha512-m7TI2n3cTS5whHS5FMComfP8SMdrQE7p/zRwuef3sKxxnUSjl/vf3dnvl/YNCRjal9pLazIgrw358oXqLwL7Ow==}
+  '@krizaka/config@0.25.0':
+    resolution: {integrity: sha512-2TmRzvHqZ8KF43+TSKlMT/+YmZk4+Z0lk7mujVxqeG++XQQ2NiPZow1W4MZvL83u8Gafv/VBX8CDgFMehOTiFg==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -4327,7 +4327,7 @@ snapshots:
       '@solid-primitives/utils': 6.4.1(solid-js@1.9.19)
       solid-js: 1.9.19
 
-  '@krizaka/config@0.20.0(eslint-config-next@16.4.3(@typescript-eslint/parser@8.72.0(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(prettier@3.9.10)(typescript@5.9.3)':
+  '@krizaka/config@0.25.0(eslint-config-next@16.4.3(@typescript-eslint/parser@8.72.0(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(prettier@3.9.10)(typescript@5.9.3)':
     dependencies:
       '@eslint/js': 10.0.1(eslint@10.13.0(jiti@2.7.0))
       dependency-cruiser: 18.7.0
@@ -4345,7 +4345,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@krizaka/config@0.20.0(eslint-config-next@16.4.3(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(prettier@3.9.10)(typescript@5.9.3)':
+  '@krizaka/config@0.25.0(eslint-config-next@16.4.3(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(prettier@3.9.10)(typescript@5.9.3)':
     dependencies:
       '@eslint/js': 10.0.1(eslint@10.13.0(jiti@2.7.0))
       dependency-cruiser: 18.7.0
@@ -6305,7 +6305,7 @@ snapshots:
       tinyglobby: 0.2.17
       unrs-resolver: 1.12.2
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.72.0(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@10.13.0(jiti@2.7.0))
+      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@10.13.0(jiti@2.7.0))
     transitivePeerDependencies:
       - supports-color
 
