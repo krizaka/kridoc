@@ -20,7 +20,8 @@ export function proxy(request: NextRequest) {
   return NextResponse.redirect(new URL(`/${locale}${pathname === "/" ? "" : pathname}`, request.url));
 }
 
-// Kridoc has no dev host: only pages without a file extension reach the proxy.
+// Kridoc has no dev host: only pages without a file extension reach the proxy. The matcher must stay a plain string literal
+// (Next reads it statically at build: a String.raw template fails the build), hence the doubled backslash.
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|.*\\..*).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|.*\\..*).*)"], // NOSONAR
 };

@@ -3,13 +3,11 @@
 // The codemods: applies the `fix:` of the ast-grep rules (rules/*.yml) — hand-written time arithmetic → date-fns —
 // then adds the date-fns import to each file that now uses one. Behaviour is identical; run the tests after.
 //   node scripts/sg-fix.mjs [paths…]     (default: the whole repository)
-// Identical in every Krizaka TypeScript repository (keep the copies identical). Dependency-free.
+// Needs the repository's own ast-grep (devDependency @ast-grep/cli).
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
-import { localBin } from "./sg-ratchet.mjs";
 
 export const DATE_FNS = ["hoursToMilliseconds", "minutesToMilliseconds", "differenceInMilliseconds"];
 
@@ -20,15 +18,15 @@ export const DATE_FNS = ["hoursToMilliseconds", "minutesToMilliseconds", "differ
  */
 export function withDateFnsImports(source) {
   const imported = new Set();
-  const existing = source.match(/import\s*\{([^}]*)\}\s*from\s*["']date-fns["'];?/);
+  const existing = /import\s*\{([^}]*)\}\s*from\s*["']date-fns["'];?/.exec(source);
   for (const name of existing?.[1]
     .split(",")
     .map((n) => n.trim())
     .filter(Boolean) ?? [])
     imported.add(name);
-  const missing = DATE_FNS.filter((name) => new RegExp(`\\b${name}\\(`).test(source) && !imported.has(name));
+  const missing = DATE_FNS.filter((name) => new RegExp(String.raw`\b${name}\(`).test(source) && !imported.has(name));
   if (missing.length === 0) return source;
-  const names = [...new Set([...imported, ...missing])].sort();
+  const names = [...new Set([...imported, ...missing])].sort((a, b) => a.localeCompare(b));
   const line = `import { ${names.join(", ")} } from "date-fns";`;
   if (existing) return source.replace(existing[0], line);
   const imports = [...source.matchAll(/^import[\s\S]*?from\s*["'][^"']+["'];?[ \t]*$/gm)];
@@ -38,16 +36,17 @@ export function withDateFnsImports(source) {
   return `${source.slice(0, end)}\n${line}${source.slice(end)}`;
 }
 
+// `git` is resolved through PATH on purpose: a developer tool run by hand on a developer machine, where git lives in no fixed place.
+const changedFiles = (root) =>
+  spawnSync("git", ["diff", "--name-only"], { cwd: root, encoding: "utf8" }).stdout.split("\n"); // NOSONAR
+
 function run() {
   const root = process.cwd();
-  const bin = localBin(root);
+  const bin = join(root, "node_modules", ".bin", "ast-grep");
   const paths = process.argv.slice(2);
-  const before = spawnSync("git", ["diff", "--name-only"], { cwd: root, encoding: "utf8" }).stdout.split("\n");
   const scan = spawnSync(bin, ["scan", "--update-all", ...paths], { cwd: root, encoding: "utf8" });
   if (scan.error) throw scan.error;
-  const after = spawnSync("git", ["diff", "--name-only"], { cwd: root, encoding: "utf8" }).stdout.split("\n");
-  const files = after.filter((f) => /\.(ts|tsx|mts)$/.test(f));
-  void before;
+  const files = changedFiles(root).filter((f) => /\.(ts|tsx|mts)$/.test(f));
   let touched = 0;
   for (const file of files) {
     const path = resolve(root, file);
