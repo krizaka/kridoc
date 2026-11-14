@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/krizaka/kridoc/compare/v0.2.5...v0.2.6) (2026-11-14)
+
+
+### Bug Fixes
+
+* **privacy:** the founder's name leaves the public surfaces ([#42](https://github.com/krizaka/kridoc/issues/42)) ([b350dd8](https://github.com/krizaka/kridoc/commit/b350dd842438e7e18969601b7aa8822a810c7f77))
+
 ## [0.2.5](https://github.com/krizaka/kridoc/compare/v0.2.4...v0.2.5) (2026-11-14)
 
 
