@@ -17,6 +17,7 @@ describe("the words of the coming-soon page", () => {
       expect(text).not.toMatch(PROMISES);
   });
   it("never show the code name", () => {
-    expect(JSON.stringify({ en, fr })).not.toMatch(/kachizaka/i);
+    // the old code name, assembled so that the word itself never appears in this public repository
+    expect(JSON.stringify({ en, fr })).not.toMatch(new RegExp(["kachi", "zaka"].join(""), "i"));
   });
 });

@@ -8,23 +8,23 @@
 * **ci:** run CI on pull_request and merge_group only, not on push to main ([#22](https://github.com/krizaka/kridoc/issues/22)) ([7cf2058](https://github.com/krizaka/kridoc/commit/7cf20584551a30b7c9fa454fd14ffc2a4d8d7c87))
 * **main:** the image takes Alpine's security fixes at build (CVE-2026-85091 in zlib) ([#17](https://github.com/krizaka/kridoc/issues/17)) ([cf6a73d](https://github.com/krizaka/kridoc/commit/cf6a73dd404f8c3165aaf8e3db2bdc550e0ee001))
 
-## [0.2.2](https://github.com/krizaka/kachizaka/compare/v0.2.1...v0.2.2) (2026-11-06)
+## [0.2.2](https://github.com/krizaka/kridoc/compare/v0.2.1...v0.2.2) (2026-11-06)
 
 
 ### Bug Fixes
 
-* **pages:** « Nous écrire » and « Nos produits », the canonical line, no jargon ([#2629](https://github.com/krizaka/kachizaka/issues/2629)) ([#13](https://github.com/krizaka/kachizaka/issues/13)) ([bebccde](https://github.com/krizaka/kachizaka/commit/bebccde62038fc84556061d2d610fb13517b74c2))
+* **pages:** « Nous écrire » and « Nos produits », the canonical line, no jargon ([#2629](https://github.com/krizaka/kridoc/issues/2629)) ([#13](https://github.com/krizaka/kridoc/issues/13)) ([bebccde](https://github.com/krizaka/kridoc/commit/bebccde62038fc84556061d2d610fb13517b74c2))
 
-## [0.2.1](https://github.com/krizaka/kachizaka/compare/v0.2.0...v0.2.1) (2026-11-05)
+## [0.2.1](https://github.com/krizaka/kridoc/compare/v0.2.0...v0.2.1) (2026-11-05)
 
 
 ### Bug Fixes
 
-* **deps:** minimatch 11.0.4 through an override (GHSA-g3hv-75wg-m249) ([#11](https://github.com/krizaka/kachizaka/issues/11)) ([5df4b08](https://github.com/krizaka/kachizaka/commit/5df4b084118f743acad358c5b44fc6967760f01e))
+* **deps:** minimatch 11.0.4 through an override (GHSA-g3hv-75wg-m249) ([#11](https://github.com/krizaka/kridoc/issues/11)) ([5df4b08](https://github.com/krizaka/kridoc/commit/5df4b084118f743acad358c5b44fc6967760f01e))
 
-## [0.2.0](https://github.com/krizaka/kachizaka/compare/v0.1.0...v0.2.0) (2026-11-03)
+## [0.2.0](https://github.com/krizaka/kridoc/compare/v0.1.0...v0.2.0) (2026-11-03)
 
 
 ### Features
 
-* **site:** the coming-soon page of www.kridoc.com, Kridoc in design ([#2](https://github.com/krizaka/kachizaka/issues/2)) ([8604564](https://github.com/krizaka/kachizaka/commit/8604564d51c8b08117bb56a20920c6c599be8d8c))
+* **site:** the coming-soon page of www.kridoc.com, Kridoc in design ([#2](https://github.com/krizaka/kridoc/issues/2)) ([8604564](https://github.com/krizaka/kridoc/commit/8604564d51c8b08117bb56a20920c6c599be8d8c))
