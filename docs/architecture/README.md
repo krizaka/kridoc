@@ -1,0 +1,55 @@
+# Kridoc architecture: the API contract v0 and its model
+
+Design only, no service code (K1 is built after the first paid pilot). Decided in ORG-039 (revision 4 of the storage subject).
+
+| File | What it is |
+| :-- | :-- |
+| [`kridoc-api.v0.openapi.yaml`](kridoc-api.v0.openapi.yaml) | the contract, OpenAPI 3.1: tenant (from the key) and space (in the path) on every operation |
+| [`kridoc.c4`](kridoc.c4) | the C4 model (LikeC4): context and containers, tenants and spaces as elements |
+
+## How it is checked
+
+- **OpenAPI.** The org has no OpenAPI validator yet, so none is added to this repository. The contract was linted with Redocly CLI 2.78.0
+  run once with `npx` (`redocly lint`, the `recommended` ruleset): valid, no warning.
+- **C4.** The org's check is `tools/architecture` of krizaka/.github (ADR-027). It reads a repository only if it is a home in the
+  `@krizaka/org` family, and `kridoc` is not yet one, so `--repo kridoc` cannot read this model. Until it is, `kridoc.c4` declares the
+  `kridoc` system itself and was parsed with the org base (`specification.c4`, `org.c4`) and the generated systems, with the org tool's
+  own parser: 0 errors, 9 elements, 8 relationships. When the family gains `kridoc`, replace the `kridoc = system` block by `extend kridoc`.
+
+## What the contract says
+
+- **Tenant** = one app installation in one environment, **the key's, never a request field**. **Space** = (tenant, user subject), the
+  user being the app's opaque account id (a UUID). Every operation names its space in the path; none crosses spaces.
+- **Auth**: server to server, `Authorization: Bearer` key of `@krizaka/api-keys`, no CORS. Scopes `spaces:read`, `spaces:write`,
+  `spaces:delete`, `spaces:export`.
+- **Retention class** (closed set: `after-check`, `after-decision`, `decision-plus-one-year`, `days`) on put, exposed on every
+  document. **Deletion record** returned by delete: object key, sha256, time, rule, store result; never a name, a person or content.
+- **Typed errors** (problem+json with a stable `code`): `key_invalid` 401, `scope_missing` and `tenant_mismatch` 403, `not_found` 404,
+  `space_gone` 410, `too_big` 413, `bad_type` 415, `over_quota` 507 (refused before any byte is written), `rate_limited` 429,
+  `storage_unavailable` 503, `bad_request` 400. The 507 for quota is this draft's choice (403 means authorization, 429 rate); review it.
+- **Object keys** behind the API: `tenants/<tenant>/users/<user>/<path>`, ids only; folders and names are catalogue metadata.
+- Not in v0: the admin endpoints for tenants and keys (K1's Kridoc admin, shown in the model), tenant-level export and closure,
+  sharing and grants (K2).
+
+## K0 coverage: what does each operation today
+
+K0 has no service and no tenant key: the apps write the bucket with the bucket's credentials. « Does » below is what the library or
+the port gives for the operation's storage part. `kts` = krizaka-ts `packages/storage`; `vk` = Verikora.
+
+| Operation | Done in K0 by (file, symbol) | Proven by (test) | Missing, ticket |
+| :-- | :-- | :-- | :-- |
+| `putDocument` | `kts` `src/port.ts` `ObjectStore.put`; `src/tenant-vault.ts` `tenantStore` (seals each object per tenant); `src/read-upload.ts` `readUpload` (size bound, `STORAGE_TOO_BIG`); `vk` `packages/core/src/document-store.ts` `DocumentStore.put` | `src/testkit.ts` `objectStoreContract` « stores a file and reads it back byte for byte »; `test/tenant-vault.test.ts` « the bucket holds ciphertext only, under t/<tenant>/ »; `test/read-upload.test.ts` | retention class on put and quota check: **missing**, krizaka-internal#3385 (class), K1 build (quota) |
+| `getDocument` | `kts` `ObjectStore.get`, `tenantStore.get`; `vk` `DocumentStore.get` | `objectStoreContract` « answers null for a missing file… »; `test/tenant-vault.test.ts` « tenant B cannot name, list or open tenant A's object… » | `404` mapping and the HTTP layer: K1 build |
+| `describeDocument` | `kts` `ObjectStore.head` (key, size), `tenantStore.head`; `vk` `DocumentStore.describe()` describes the **store**, not a document | `test/tenant-vault.test.ts` (head through get) | sha256, content type, retention and folder metadata: **missing**, catalogue is K1 (opened with #3384's build; retention class #3385) |
+| `deleteDocument` | `kts` `ObjectStore.delete` (idempotent), `tenantStore.delete`; `vk` `DocumentStore.delete`, `apps/web/lib/document-objects.ts` `removeObject`, `apps/web/lib/retention.ts` `purgeDocument`; receipt: `apps/web/lib/deletion-receipt.ts` `recordDeletionReceipt`, `DELETION_RULE` | `objectStoreContract` « …deleting it twice is fine »; `vk` `packages/core/src/document-store.contract-kit.ts` | the deletion record returned **by the adapter** and the purge ledger written before delete: **missing**, krizaka-internal#3385 and #3499. Verikora's rule name `one-year-after-decision` differs from the contract's `decision-plus-one-year`: align in #3385 |
+| `listDocuments` | `kts` `ObjectStore.list(prefix)` (flat, key order); `tenantStore.list` | `objectStoreContract` « lists the files under a prefix, directories flattened, in key order » | `vk` `DocumentStore` has **no list** (by design, ORG-039 § 9); folders, cursor and per-space prefix: **missing**, K1 catalogue |
+| `createDocumentLink` | `kts` `ObjectStore.signedUrl`; `vk` `DocumentStore.signedUrl`; `tenantStore` answers `null` (the service streams) | `test/storage.test.ts` « signs a link the way a token-authenticated pull zone expects… » | link resolved and audited through Kridoc: **missing**, K1 build |
+| `exportSpace` | prefix listing (`ObjectStore.list`) is the only primitive | — | **missing**, K1 build (opened with #3384's build) |
+| `deleteSpace` | `kts` `tenantVault.shredTenant` (crypto-shredding of a **tenant**, not a space); prefix `list` + `delete` for a space | `test/tenant-vault.test.ts` « a shredded tenant's objects never open again… » | space-level deletion with one record per object: **missing**, K1 build |
+| `getSpaceUsage`, `getTenantUsage` | none | — | **missing**, quotas and meters are K1 (ORG-039 § 7), opened with #3384's build |
+| `describeTenant` | `kts` `src/managed.ts` `openManaged` (residency label of the opened store); `tenantVault` | `test/managed.test.ts` | tenant record, mode and key status: **missing**, K1 build |
+| Tenant on every operation (from the key) | `kts` `tenantStore` and `assertTenantId` (tenant in the prefix `t/<tenant>/` and in the authenticated data); API keys: `packages/api-keys/src/keys.ts` `createApiKeys` | `test/tenant-vault.test.ts` « tenant B cannot name, list or open… », « refuses a malformed tenant id »; `packages/api-keys/test/keys.test.ts` | prefix is `t/<tenant>/`, not `tenants/<tenant>/`: K1 (step 9 of ORG-039); no tenant key in K0 (by design); the two-spaces / two-tenants test in the kit: krizaka-internal#3385 |
+| Space on every operation (`tenants/<t>/users/<u>/…`) | `kts` `src/keys.ts` `assertKey`, `defineLayout` | `test/storage.test.ts` « accepts good keys and refuses bad ones », « a layout prefix needs its trailing slash » | Verikora's key is `<owner>/<document>/original.<ext>` (`apps/web/lib/retention.ts` `objectKey`): **missing**, krizaka-internal#3638 |
+
+Where a cell says « K1 build », the ticket is opened when K1's build starts (after the first paid pilot, milestone J3); until then the
+epic krizaka-internal#3038 holds it.

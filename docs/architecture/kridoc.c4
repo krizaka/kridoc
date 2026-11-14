@@ -16,6 +16,15 @@ model {
       }
     }
 
+    contract = library 'Contract and model' {
+      description 'The API contract v0 (OpenAPI) and this model: the design K1 is built from, no service code.'
+      technology 'OpenAPI 3.1, LikeC4'
+      metadata {
+        repo 'kridoc'
+        issue 'krizaka-internal#3384'
+      }
+    }
+
     api = container 'Kridoc API' {
       #planned
       description 'Server-to-server API: put, get, describe, delete, list, link, export, usage; the tenant is the key\'s, the space is in every path (contract v0).'

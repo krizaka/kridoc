@@ -29,8 +29,11 @@ security:
   - tenantKey: []
 tags:
   - name: Documents
+    description: One document of one space.
   - name: Spaces
+    description: One space as a whole (export, deletion, usage).
   - name: Tenant
+    description: The tenant of the authenticated key.
 paths:
   /v0/spaces/{user}/documents/{document}:
     parameters:
@@ -236,7 +239,7 @@ paths:
         - tenantKey: [spaces:read]
       responses:
         "200":
-          description: Counts only: no name, no content, no person.
+          description: "Counts only, no name, no content, no person."
           content:
             application/json: { schema: { $ref: "#/components/schemas/Usage" } }
         "401": { $ref: "#/components/responses/Unauthorized" }
