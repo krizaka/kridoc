@@ -19,9 +19,9 @@ npm run test
 npm run build
 ```
 
-## Private repository: no scheduled CI
+## Public repository: GitHub-hosted runners, no scheduled CI
 
-This repository is private and pays for its minutes (founder, 2026-11-04, krizaka-internal#2364): no `schedule:` trigger. Template drift runs on demand (`workflow_dispatch`); everything else runs on pull requests and merges.
+This repository is public: its jobs run on GitHub-hosted runners, never on the private Mac runner (`self-hosted`; krizaka-internal#3633). No `schedule:` trigger (krizaka-internal#2364): template drift runs on demand (`workflow_dispatch`); everything else runs on pull requests and merges.
 
 ## Read first
 
