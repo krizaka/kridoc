@@ -13,7 +13,7 @@ Design only, no service code (K1 is built after the first paid pilot). Decided i
   run once with `npx` (`redocly lint`, the `recommended` ruleset): valid, no warning.
 - **C4.** The org's check is `tools/architecture` of krizaka/.github (ADR-027). `kridoc` is a system of the `@krizaka/org` family
   (1.5.0), so `kridoc.c4` extends it (`extend kridoc`). `node architecture.mjs --local <reference copies> --repo kridoc --use
-  kridoc=<this checkout>` prints `kridoc pass` with no item (exit 0), run with `@krizaka/org` 1.5.0.
+kridoc=<this checkout>` prints `kridoc pass` with no item (exit 0), run with `@krizaka/org` 1.5.0.
 
 ## What the contract says
 
