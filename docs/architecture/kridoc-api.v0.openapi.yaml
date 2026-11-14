@@ -1,0 +1,468 @@
+openapi: 3.1.0
+info:
+  title: Kridoc API
+  version: 0.0.1
+  summary: Business document storage, one private space per user of one app installation (the contract v0, a design, not a service).
+  description: |
+    The contract of Kridoc's K1 service (ORG-039). **Nothing implements it yet**: K0 keeps documents through `@krizaka/storage`
+    and each operation is mapped to what K0 does in [README.md](README.md).
+
+    **Tenancy.** The *tenant* is one installation of an application in one environment (`verikora-dev`, `verikora-prod`). It is the
+    authenticated key's, never a field of a request: a request that names another tenant answers 403 and is audited. A *space* is
+    `(tenant, user)`, where the user is the application's stable opaque account id (a UUID, never an e-mail or a name). Every
+    operation names its space in the path, and there is no operation across spaces.
+
+    **Server to server only.** The key is a bearer key of `@krizaka/api-keys`; there is no CORS and no browser origin. A browser gets
+    at most one short signed link to one document.
+
+    **Object keys.** Behind the API, an object is `tenants/<tenant>/users/<user>/<path>`, ids only. Folders and names are catalogue
+    metadata, never part of an object key.
+
+    **No price** is stated here: quotas are settings of the tenant.
+  license:
+    name: FSL-1.1-ALv2
+    identifier: FSL-1.1-ALv2
+servers:
+  - url: https://api.kridoc.example
+    description: Placeholder. The real host is decided at K1; each environment (dev, prod) has its own, and a key works in one only.
+security:
+  - tenantKey: []
+tags:
+  - name: Documents
+  - name: Spaces
+  - name: Tenant
+paths:
+  /v0/spaces/{user}/documents/{document}:
+    parameters:
+      - $ref: "#/components/parameters/User"
+      - $ref: "#/components/parameters/Document"
+    put:
+      operationId: putDocument
+      tags: [Documents]
+      summary: Put a document (create, or replace its content).
+      description: |
+        Stores the bytes under the document id, with the retention class. The size is bounded and the quota is checked before any byte
+        is written; over quota or too big, nothing is stored.
+      security:
+        - tenantKey: [spaces:write]
+      parameters:
+        - $ref: "#/components/parameters/RetentionClass"
+        - $ref: "#/components/parameters/RetentionDays"
+        - $ref: "#/components/parameters/Folder"
+      requestBody:
+        required: true
+        content:
+          application/pdf: { schema: { type: string, format: binary } }
+          text/plain: { schema: { type: string, format: binary } }
+          application/octet-stream: { schema: { type: string, format: binary } }
+      responses:
+        "200":
+          description: Stored (an existing document was replaced).
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Document" } }
+        "201":
+          description: Stored (new).
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Document" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "410": { $ref: "#/components/responses/Gone" }
+        "413": { $ref: "#/components/responses/TooBig" }
+        "415": { $ref: "#/components/responses/BadType" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/StorageUnavailable" }
+        "507": { $ref: "#/components/responses/OverQuota" }
+    get:
+      operationId: getDocument
+      tags: [Documents]
+      summary: Get a document's bytes.
+      security:
+        - tenantKey: [spaces:read]
+      responses:
+        "200":
+          description: The bytes, with the content type they were stored with.
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+            text/plain: { schema: { type: string, format: binary } }
+            application/octet-stream: { schema: { type: string, format: binary } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "410": { $ref: "#/components/responses/Gone" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/StorageUnavailable" }
+    delete:
+      operationId: deleteDocument
+      tags: [Documents]
+      summary: Delete a document and return its deletion record.
+      description: |
+        Deleting a document that is not there answers 404 with no record. The record is written to the purge ledger before the object
+        is deleted: if that write fails, nothing is deleted and the call answers 503.
+      security:
+        - tenantKey: [spaces:delete]
+      responses:
+        "200":
+          description: Deleted; the record says what was deleted, by which rule, with which result.
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/DeletionRecord" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/StorageUnavailable" }
+  /v0/spaces/{user}/documents/{document}/description:
+    parameters:
+      - $ref: "#/components/parameters/User"
+      - $ref: "#/components/parameters/Document"
+    get:
+      operationId: describeDocument
+      tags: [Documents]
+      summary: Describe a document (metadata and retention class, no bytes).
+      security:
+        - tenantKey: [spaces:read]
+      responses:
+        "200":
+          description: The document's description.
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Document" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v0/spaces/{user}/documents/{document}/link:
+    parameters:
+      - $ref: "#/components/parameters/User"
+      - $ref: "#/components/parameters/Document"
+    post:
+      operationId: createDocumentLink
+      tags: [Documents]
+      summary: Issue a short signed link to one document, for a browser.
+      description: One object of one space, for a few minutes. The link resolves through Kridoc and is audited.
+      security:
+        - tenantKey: [spaces:read]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                ttlSeconds: { type: integer, minimum: 1, maximum: 900, default: 300 }
+      responses:
+        "200":
+          description: The link.
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Link" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v0/spaces/{user}/documents:
+    parameters:
+      - $ref: "#/components/parameters/User"
+    get:
+      operationId: listDocuments
+      tags: [Documents]
+      summary: List the documents of one space, optionally in one folder.
+      description: Never across spaces. Folders are metadata of the catalogue; the response lists the child folders of the one asked for.
+      security:
+        - tenantKey: [spaces:read]
+      parameters:
+        - name: folder
+          in: query
+          description: A folder path of the catalogue (`/` is the root). Not an object-key segment.
+          schema: { type: string, default: "/", maxLength: 1024 }
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        "200":
+          description: One page, in document id order.
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/DocumentList" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v0/spaces/{user}/export:
+    parameters:
+      - $ref: "#/components/parameters/User"
+    get:
+      operationId: exportSpace
+      tags: [Spaces]
+      summary: Export one space (access and portability, Law 25 s. 27).
+      description: A structured archive of the space's documents and metadata, as a stream.
+      security:
+        - tenantKey: [spaces:export]
+      responses:
+        "200":
+          description: The archive.
+          content:
+            application/zip: { schema: { type: string, format: binary } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v0/spaces/{user}:
+    parameters:
+      - $ref: "#/components/parameters/User"
+    delete:
+      operationId: deleteSpace
+      tags: [Spaces]
+      summary: Delete one space (the user was erased in the app) and return one deletion record per object.
+      security:
+        - tenantKey: [spaces:delete]
+      responses:
+        "200":
+          description: The space and every version of every object are deleted.
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/SpaceDeletion" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/StorageUnavailable" }
+  /v0/spaces/{user}/usage:
+    parameters:
+      - $ref: "#/components/parameters/User"
+    get:
+      operationId: getSpaceUsage
+      tags: [Spaces]
+      summary: Usage and quota of one space.
+      security:
+        - tenantKey: [spaces:read]
+      responses:
+        "200":
+          description: Counts only: no name, no content, no person.
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Usage" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v0/tenant:
+    get:
+      operationId: describeTenant
+      tags: [Tenant]
+      summary: Describe the authenticated tenant (mode, residency, key status).
+      security:
+        - tenantKey: [spaces:read]
+      responses:
+        "200":
+          description: The tenant of the key.
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Tenant" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v0/tenant/usage:
+    get:
+      operationId: getTenantUsage
+      tags: [Tenant]
+      summary: Usage and quota of the authenticated tenant.
+      security:
+        - tenantKey: [spaces:read]
+      responses:
+        "200":
+          description: Counts only.
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Usage" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+components:
+  securitySchemes:
+    tenantKey:
+      type: http
+      scheme: bearer
+      bearerFormat: "<prefix>_<publicId>_<secret> (@krizaka/api-keys)"
+      description: |
+        The tenant's key, created at Kridoc and entered by the app's admin. It is scoped to one tenant and one environment; only the
+        SHA-256 of its secret is kept. The tenant of every call is this key's. Scopes: `spaces:read`, `spaces:write`,
+        `spaces:delete`, `spaces:export`.
+  parameters:
+    User:
+      name: user
+      in: path
+      required: true
+      description: The user subject of the space, the app's stable opaque account id.
+      schema: { type: string, format: uuid }
+    Document:
+      name: document
+      in: path
+      required: true
+      description: A document id (ids only, never a file name). Kridoc's at K1.
+      schema: { type: string, pattern: "^[a-z0-9][a-z0-9-]{0,63}$" }
+    RetentionClass:
+      name: Kridoc-Retention-Class
+      in: header
+      required: true
+      description: One class of a closed set; the admin's bounds are tenant settings.
+      schema: { $ref: "#/components/schemas/RetentionClass" }
+    RetentionDays:
+      name: Kridoc-Retention-Days
+      in: header
+      description: Required with the class `days`, refused with any other.
+      schema: { type: integer, minimum: 1 }
+    Folder:
+      name: Kridoc-Folder
+      in: header
+      description: The folder of the catalogue the document goes in (metadata, never an object key).
+      schema: { type: string, default: "/", maxLength: 1024 }
+  schemas:
+    RetentionClass:
+      type: string
+      enum: [after-check, after-decision, decision-plus-one-year, days]
+    Document:
+      type: object
+      required: [id, space, contentType, size, sha256, retention, createdAt]
+      properties:
+        id: { type: string }
+        space: { $ref: "#/components/schemas/SpaceRef" }
+        folder: { type: string }
+        contentType: { type: string }
+        size: { type: integer, minimum: 0 }
+        sha256: { type: string, pattern: "^[0-9a-f]{64}$", description: The hash of what was stored. }
+        retention: { $ref: "#/components/schemas/Retention" }
+        createdAt: { type: string, format: date-time }
+    Retention:
+      type: object
+      required: [class]
+      properties:
+        class: { $ref: "#/components/schemas/RetentionClass" }
+        days: { type: integer, minimum: 1 }
+        purgeAfter: { type: [string, "null"], format: date-time, description: Null until the event the class waits for has happened. }
+    SpaceRef:
+      type: object
+      required: [tenant, user]
+      properties:
+        tenant: { type: string, pattern: "^[a-z0-9_-]{1,64}$" }
+        user: { type: string, format: uuid }
+    DocumentList:
+      type: object
+      required: [folder, folders, documents, nextCursor]
+      properties:
+        folder: { type: string }
+        folders: { type: array, items: { type: string } }
+        documents: { type: array, items: { $ref: "#/components/schemas/Document" } }
+        nextCursor: { type: [string, "null"] }
+    Link:
+      type: object
+      required: [url, expiresAt]
+      properties:
+        url: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+    DeletionRecord:
+      type: object
+      description: Never holds a file name, a person or any content.
+      required: [objectKey, sha256, deletedAt, rule, result]
+      properties:
+        objectKey: { type: string, description: "`tenants/<tenant>/users/<user>/<path>`, ids only." }
+        sha256: { type: string, pattern: "^[0-9a-f]{64}$" }
+        deletedAt: { type: string, format: date-time }
+        rule:
+          type: string
+          enum: [requested, after-check, after-decision, decision-plus-one-year, days, space-deleted, tenant-closed]
+          description: The rule that purged the object.
+        result:
+          type: string
+          enum: [deleted, already-absent]
+          description: The store's result.
+    SpaceDeletion:
+      type: object
+      required: [space, records]
+      properties:
+        space: { $ref: "#/components/schemas/SpaceRef" }
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/DeletionRecord" }
+    Usage:
+      type: object
+      required: [bytes, objects, quota]
+      properties:
+        bytes: { type: integer, minimum: 0 }
+        objects: { type: integer, minimum: 0 }
+        quota:
+          type: object
+          description: Settings of the tenant, never constants; null means no limit set.
+          properties:
+            bytes: { type: [integer, "null"] }
+            objects: { type: [integer, "null"] }
+            maxUploadBytes: { type: [integer, "null"] }
+            operationsPerMinute: { type: [integer, "null"] }
+    Tenant:
+      type: object
+      required: [id, environment, mode, residency, key]
+      properties:
+        id: { type: string, pattern: "^[a-z0-9_-]{1,64}$" }
+        environment: { type: string, enum: [dev, prod] }
+        mode: { type: string, enum: [kridoc-hosted, customer-storage] }
+        residency:
+          type: object
+          required: [label, region]
+          properties:
+            label: { type: string, enum: [canada, elsewhere, unknown], description: The label of the opened store (TS-006). }
+            region: { type: [string, "null"] }
+        key:
+          type: object
+          required: [hint, status, scopes]
+          properties:
+            hint: { type: string }
+            status: { type: string, enum: [active, rotated, expired, revoked] }
+            scopes: { type: array, items: { type: string, enum: [spaces:read, spaces:write, spaces:delete, spaces:export] } }
+            lastUsedAt: { type: [string, "null"], format: date-time }
+    Problem:
+      type: object
+      description: RFC 9457 problem details. `code` is stable; `message` is not a catalogue text.
+      required: [type, title, status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code: { $ref: "#/components/schemas/ErrorCode" }
+        detail: { type: string }
+    ErrorCode:
+      type: string
+      enum:
+        - key_invalid
+        - scope_missing
+        - tenant_mismatch
+        - bad_request
+        - not_found
+        - space_gone
+        - too_big
+        - bad_type
+        - over_quota
+        - rate_limited
+        - storage_unavailable
+  responses:
+    BadRequest:
+      description: A bad id, key, retention class or header (`bad_request`).
+      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
+    Unauthorized:
+      description: The key is unknown, revoked or expired (`key_invalid`).
+      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
+    Forbidden:
+      description: The key lacks the scope (`scope_missing`), or the request names another tenant (`tenant_mismatch`, audited).
+      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
+    NotFound:
+      description: No such space or document (`not_found`).
+      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
+    Gone:
+      description: The space was deleted or the tenant closed (`space_gone`).
+      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
+    TooBig:
+      description: The upload exceeds the size bound (`too_big`). Nothing is stored.
+      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
+    BadType:
+      description: A content type not allowed, or one the bytes contradict (`bad_type`).
+      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
+    OverQuota:
+      description: The tenant's or the space's quota would be exceeded (`over_quota`). Refused before any byte is written; a quota never blocks a delete or an export.
+      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
+    RateLimited:
+      description: Too many operations per minute (`rate_limited`).
+      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
+    StorageUnavailable:
+      description: The store or the purge ledger failed (`storage_unavailable`). The caller fails closed; nothing falls back to another store.
+      content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } }
