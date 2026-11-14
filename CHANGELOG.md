@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/krizaka/kridoc/compare/v0.2.4...v0.2.5) (2026-11-14)
+
+
+### Bug Fixes
+
+* **site:** kridoc.com says its true stage, lists French first and ends with the family's footer ([#3595](https://github.com/krizaka/kridoc/issues/3595)) ([#33](https://github.com/krizaka/kridoc/issues/33)) ([6618d69](https://github.com/krizaka/kridoc/commit/6618d6956d35c912b8e7c67639fca6b6cece8fc2))
+
 ## [0.2.4](https://github.com/krizaka/kridoc/compare/v0.2.3...v0.2.4) (2026-11-14)
 
 
