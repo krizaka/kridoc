@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/krizaka/kridoc/compare/v0.2.3...v0.2.4) (2026-11-14)
+
+
+### Bug Fixes
+
+* **ci:** kridoc is public: its jobs run on GitHub-hosted runners, never on the private Mac runner ([#34](https://github.com/krizaka/kridoc/issues/34)) ([cece58f](https://github.com/krizaka/kridoc/commit/cece58f9c19e9d6273e2822302215308166c887d))
+
 ## [0.2.3](https://github.com/krizaka/kridoc/compare/v0.2.2...v0.2.3) (2026-11-08)
 
 
