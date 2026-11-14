@@ -1,0 +1,91 @@
+// Kridoc's containers, current and target (ORG-027, ORG-039). The service is K1's design (planned): nothing below `site` runs
+// today. Tenants and spaces are elements of the model. The contract of `api` is kridoc-api.v0.openapi.yaml; what K0 already
+// does for each operation is in README.md.
+//
+// `kridoc` is not yet a system of the org family (@krizaka/org), so this file declares it. When the family gains it, replace the
+// `kridoc = system` block by `extend kridoc` (ORG-039, migration plan).
+model {
+  kridoc = system 'Kridoc' {
+    description 'Business document storage: each app installation is a tenant, each user has one space per app, in Canada.'
+    site = app 'Site' {
+      description 'The coming-soon page today; the product site, sign-up and trust page at target.'
+      technology 'Next.js, @krizaka/ui'
+      metadata {
+        repo 'kridoc'
+        path 'apps/web'
+      }
+    }
+
+    contract = library 'Contract and model' {
+      description 'The API contract v0 (OpenAPI) and this model: the design K1 is built from, no service code.'
+      technology 'OpenAPI 3.1, LikeC4'
+      metadata {
+        repo 'kridoc'
+        issue 'krizaka-internal#3384'
+      }
+    }
+
+    api = container 'Kridoc API' {
+      #planned
+      description 'Server-to-server API: put, get, describe, delete, list, link, export, usage; the tenant is the key\'s, the space is in every path (contract v0).'
+      technology 'OpenAPI 3.1, HTTPS, bearer key'
+      metadata {
+        issue 'krizaka-internal#3384'
+        adr 'ADR-039'
+      }
+
+      tenants = container 'Tenants and keys' {
+        #planned
+        description 'One tenant per app installation per environment; its key is created here, entered by the app admin, rotated with overlap, revoked.'
+        technology '@krizaka/api-keys'
+        metadata {
+          adr 'ADR-039'
+        }
+      }
+      spaces = container 'Spaces' {
+        #planned
+        description 'One private space per (tenant, user); a user subject is the app\'s opaque account id. Documents, folders, retention class, deletion record.'
+        metadata {
+          adr 'ADR-039'
+        }
+      }
+    }
+
+    storage = library 'Storage library' {
+      #planned
+      description 'The port every adapter implements: put, get, head, delete, list, signed link; the tenant vault seals each object.'
+      technology '@krizaka/storage'
+      metadata {
+        adr 'ADR-039'
+      }
+    }
+
+    catalog = datastore 'Catalogue' {
+      #planned
+      description 'Tenants, key hashes, spaces, folders, retention classes, the audit, the meters; in Canada.'
+      technology 'PostgreSQL, Canada'
+      metadata {
+        adr 'ADR-039'
+      }
+    }
+
+    bucket = datastore 'Bucket' {
+      #planned
+      description 'Ciphertext only, under tenants/<tenant>/users/<user>/; a private S3-compatible bucket (Toronto for K0 and K1).'
+      technology 'S3-compatible'
+      metadata {
+        adr 'ADR-039'
+      }
+    }
+  }
+
+  kridoc.api.tenants -> kridoc.api.spaces 'scopes every call to one tenant' { #planned }
+  kridoc.api -> kridoc.catalog 'reads and writes the catalogue' { #planned }
+  kridoc.api -> kridoc.storage 'puts and gets objects through' { #planned }
+  kridoc.storage -> kridoc.bucket 'stores sealed objects' { #planned }
+
+  verikora -> kridoc.api 'keeps documents, with its tenant key, server to server' { #planned }
+  folioviv -> kridoc.api 'keeps private business files, server to server' { #planned }
+  sovkora -> kridoc.api 'reads one document under a grant' { #planned }
+  kridoc.site -> kridoc.api 'calls as the tenant kridoc-web (K2)' { #planned }
+}
