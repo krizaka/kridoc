@@ -11,10 +11,9 @@ Design only, no service code (K1 is built after the first paid pilot). Decided i
 
 - **OpenAPI.** The org has no OpenAPI validator yet, so none is added to this repository. The contract was linted with Redocly CLI 2.78.0
   run once with `npx` (`redocly lint`, the `recommended` ruleset): valid, no warning.
-- **C4.** The org's check is `tools/architecture` of krizaka/.github (ADR-027). It reads a repository only if it is a home in the
-  `@krizaka/org` family, and `kridoc` is not yet one, so `--repo kridoc` cannot read this model. Until it is, `kridoc.c4` declares the
-  `kridoc` system itself and was parsed with the org base (`specification.c4`, `org.c4`) and the generated systems, with the org tool's
-  own parser: 0 errors, 9 elements, 8 relationships. When the family gains `kridoc`, replace the `kridoc = system` block by `extend kridoc`.
+- **C4.** The org's check is `tools/architecture` of krizaka/.github (ADR-027). `kridoc` is a system of the `@krizaka/org` family
+  (1.5.0), so `kridoc.c4` extends it (`extend kridoc`). `node architecture.mjs --local <reference copies> --repo kridoc --use
+kridoc=<this checkout>` prints `kridoc pass` with no item (exit 0), run with `@krizaka/org` 1.5.0.
 
 ## What the contract says
 
