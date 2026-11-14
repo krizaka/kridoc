@@ -11,7 +11,7 @@
     "lint": "pnpm run lint:workspace && turbo run lint && pnpm run check:i18n && krizaka-sg-ratchet && pnpm run format:check",
     "check:i18n": "krizaka-i18n check apps/web/messages",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test && vitest run && node --test scripts/check-template-drift.test.mjs scripts/promote-production.test.mjs",
+    "test": "turbo run test && vitest run && node --test --test-timeout=120000 --test-force-exit scripts/check-template-drift.test.mjs scripts/promote-production.test.mjs",
     "check": "pnpm run lint && pnpm run typecheck && pnpm run test",
     "drift": "node scripts/check-template-drift.mjs",
     "seo:check": "krizaka-seo-family --base http://localhost:3000 --host https://www.kridoc.com --types WebSite",

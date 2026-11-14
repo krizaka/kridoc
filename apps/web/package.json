@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
+    "check:code-names": "krizaka-code-names messages",
     "test": "vitest run --coverage"
   },
   "dependencies": {

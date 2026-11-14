@@ -4,6 +4,8 @@ import { defineConfig } from "vitest/config";
 // own tests (init, drift) run with node:test and leave the product when `init` removes them.
 export default defineConfig({
   test: {
+    // Per-test time limit, 2 min (rule time-limits, krizaka-internal#2007).
+    testTimeout: 120_000,
     include: ["scripts/**/*.test.mjs"],
     exclude: ["scripts/init.test.mjs", "scripts/check-template-drift.test.mjs", "scripts/promote-production.test.mjs"],
   },
