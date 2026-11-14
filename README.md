@@ -38,8 +38,8 @@ Started from [`krizaka/template-next-app`](https://github.com/krizaka/template-n
 workflows (`.github/workflows/ci.yml` only wires them), the SEO contract is `scripts/check-seo-family.mjs` (an identical copy in
 every Krizaka site), and the rules for agents are in [AGENTS.md](AGENTS.md) and [docs/agents.md](docs/agents.md).
 
-
 <!-- krizaka:workflows:start -->
+
 ## Workflows
 
 What runs in the Actions tab of this repository.
@@ -51,12 +51,15 @@ What runs in the Actions tab of this repository.
 - **Promote to production** (`production.yml`): Fast-forwards the production branch to the release tag. Runs when a release is published, on demand.
 - **Release PR** (`release-please.yml`): Keeps one release PR open from the merged commits; its merge tags the release. Runs on push.
 - **Security scan** (`security.yml`): Secret scan (gitleaks) and workflow scan (zizmor); both are required checks. Runs on every pull request, in the merge queue, on push.
+
 <!-- krizaka:workflows:end -->
 
 ## Licence
 
-The code of this repository (the coming-soon site) is under the [Apache License 2.0](LICENSE). Kridoc's trademarks:
-[TRADEMARKS](https://github.com/krizaka/.github/blob/main/TRADEMARKS.md).
+[FSL-1.1-ALv2](LICENSE.md) (Functional Source License, Apache-2.0 future licence) © Technologies Krizaka Inc. — read,
+run, modify and self-host it for any purpose except offering a competing service; each version becomes Apache-2.0 two
+years after its release. Commits before the licence change remain [Apache-2.0](LICENSE-APACHE) — see [NOTICE](NOTICE)
+and ADR-031. Kridoc's names and birds are not licensed: [trademark policy](https://github.com/krizaka/.github/blob/main/TRADEMARKS.md).
 
 ## Deploys
 
