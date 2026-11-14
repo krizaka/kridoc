@@ -19,7 +19,6 @@ jobs:
     permissions:
       contents: read
     with:
-      runs-on: '["self-hosted","macOS","krizaka"]' # private repository only, krizaka-internal#2939: the Mac runner, no billed minutes
       package-manager: pnpm
       typecheck-script: typecheck
       next-cache-paths: apps/web/.next/cache
@@ -36,7 +35,7 @@ jobs:
     name: Lint · Typecheck · Tests · Build
     needs: ci
     if: ${{ always() }}
-    runs-on: [self-hosted, macOS, krizaka] # private repository only, krizaka-internal#2939
+    runs-on: ubuntu-latest # public repository: GitHub-hosted, never the private Mac runner (krizaka-internal#3633)
     timeout-minutes: 2
     env:
       RESULT: ${{ needs.ci.outputs.result }}
