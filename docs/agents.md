@@ -33,6 +33,15 @@ every string in `messages/*.json`, `@krizaka/ui` blocks, tests with every change
   `SETTINGS.documents`. Off by default (`MEDIA_STORAGE_ENABLED`): every document route answers 404. On, production requires `AUTH_ENABLED=on`,
   `MEDIA_STORAGE_PROVIDER=s3`, `MEDIA_DOCUMENTS_TENANT` and the `MEDIA_S3_*` settings with a Canadian region (Law 25). No live bucket in CI: the
   bucket adapter runs `objectStoreContract` on a fake S3.
+- **Storage API for the other products** (krizaka-internal#3756, slice 5 of the design note): `/api/storage/v1/objects/{key}` (PUT, GET,
+  HEAD, DELETE), `/api/storage/v1/objects?prefix=`, `/api/storage/v1/links/{key}` (POST signs, GET opens). A client is a row of
+  `storage_client` (`infra/migrations/2026-11-18-storage-clients.sql`); its tenant comes from its `kst1.` bearer token, never from the
+  request; only the token's keyed hash is stored. Tokens are issued, listed and revoked with `pnpm storage:client` (DATABASE_URL,
+  MEDIA_VAULT_KEY); the token is printed once. Services in `apps/web/lib/storage/` (`storage-clients.ts`, `storage-api.ts`), composition
+  root `apps/web/app/storage-api-edge.ts`, refusals `StorageApiError` mapped once in `lib/storage/api-http.ts` (words under
+  `storageApi.errors`), limits `SETTINGS.storageApi`. Same switch as the documents (`MEDIA_STORAGE_ENABLED`, off: every route 404). The
+  contract with Verikora is `docs/architecture/kridoc-storage-api.v1.openapi.yaml` (Verikora generates its types from a copy) and
+  `objectStoreContract`, run against the routes through `lib/storage/kridoc-api-store.ts`.
 - `dev-preview.json` is data: `devPreview` is claimed only when every criterion has fresh evidence.
 
 ## 9. Anti-slop (ADR-015)

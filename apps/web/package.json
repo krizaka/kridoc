@@ -11,6 +11,7 @@
     "check:code-names": "krizaka-code-names messages",
     "test": "vitest run --coverage",
     "auth:create-admin": "esbuild scripts/create-admin.mts --bundle --platform=node --format=esm '--external:@krizaka/*' --external:pg --external:zod --log-level=warning --outfile=node_modules/.cache/create-admin.mjs && node node_modules/.cache/create-admin.mjs",
+    "storage:client": "esbuild scripts/storage-client.mts --bundle --platform=node --format=esm '--external:@krizaka/*' --external:pg --external:zod --log-level=warning --outfile=node_modules/.cache/storage-client.mjs && node node_modules/.cache/storage-client.mjs",
     "db:rebuild": "esbuild scripts/db-rebuild.mts --bundle --platform=node --format=esm '--external:@krizaka/*' --external:pg --external:zod --log-level=warning --outfile=node_modules/.cache/db-rebuild.mjs && node node_modules/.cache/db-rebuild.mjs"
   },
   "dependencies": {

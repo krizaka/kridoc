@@ -19,6 +19,18 @@ export const SETTINGS = {
     maxBytes: 25 * 1024 * 1024,
     types: ["application/pdf", "image/png", "image/jpeg", "image/webp"],
   },
+  /**
+   * The storage API of the other products (`/api/storage/v1`, krizaka-internal#3756): the largest object, the types a client may
+   * declare (`application/octet-stream` for a product's own ciphertext), the longest a signed link lives, the most objects one list
+   * answers, and the requests one client may make in a window. Per tenant in the admin's settings later (slice 4).
+   */
+  storageApi: {
+    maxBytes: 25 * 1024 * 1024,
+    types: ["application/octet-stream", "application/pdf", "image/png", "image/jpeg", "image/webp", "text/plain"],
+    signedUrlSeconds: 300,
+    listMax: 1000,
+    rateLimit: { perSubject: 600, windowSeconds: 60 },
+  },
 } as const;
 
 /** An installation's tenant id: the prefix of every key (letters, digits, - or _; `assertTenantId` of @krizaka/storage). */

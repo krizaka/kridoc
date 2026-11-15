@@ -1,6 +1,6 @@
 # Kridoc's storage service
 
-Status: design, slices 1 and 3 built (krizaka-internal#3719, slice D of #3714; encryption per account krizaka-internal#3754). Founder: « kridoc are responsable to exopse storages to all
+Status: design, slices 1, 3 and 5 built (krizaka-internal#3719, slice D of #3714; encryption per account krizaka-internal#3754; product API krizaka-internal#3756). Founder: « kridoc are responsable to exopse storages to all
 our apps » (2026-11-14); « chaque produit est indepedant donc il mange ses users » (2026-11-15). Law 25: personal data stays in Canada.
 
 ## Résumé (français)
@@ -15,6 +15,7 @@ our apps » (2026-11-14); « chaque produit est indepedant donc il mange ses use
 8. Verikora ajoute « Kridoc » comme fournisseur dans son registre (ADR-005), puis déplace ses documents avec son déplacement vérifié.
 9. Tranches 1 et 3 : les documents des comptes Kridoc, derrière `MEDIA_STORAGE_ENABLED` (éteint par défaut) ; chaque compte a sa
    propre clé (enveloppe, clé racine `MEDIA_VAULT_KEY`), détruite quand le compte est effacé : ses fichiers deviennent illisibles.
+   Tranche 5 : l'API des produits (`/api/storage/v1`), un jeton `kst1.` par produit et environnement, émis par `pnpm storage:client`.
 10. À décider par le fondateur : le bucket canadien (fournisseur, coût) et ses clés.
 
 ## Two users of one store
@@ -22,7 +23,7 @@ our apps » (2026-11-14); « chaque produit est indepedant donc il mange ses use
 | Who                                      | Door                                | Tenant                                                          | Keys under                                                      |
 | ---------------------------------------- | ----------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
 | A person with a Kridoc account           | `/api/documents` (session cookie)   | the installation (`MEDIA_DOCUMENTS_TENANT`, e.g. `kridoc-prod`) | `t/<installation>/t/account-<accountId>/documents/<documentId>` |
-| Another Krizaka product (Verikora first) | `/api/storage/v1/…` (product token) | one per product and environment (`verikora-prod`)               | `t/<product>/<the product's own key>`                           |
+| Another Krizaka product (Verikora first) | `/api/storage/v1/…` (product token) | one per product and environment (`verikora-prod`)               | `t/<installation>/t/<product tenant>/<the product's own key>`   |
 
 Both sit on one `ObjectStore` of `@krizaka/storage` (`bucketStore` in production, `folderStore` in development and tests). The tenant
 is never read from a request: the installation's comes from the environment once at the edge; a product's comes from its token.
@@ -83,7 +84,23 @@ independent place and do not move to Kridoc.
 2. **Library**: a fake S3 in `@krizaka/storage/testkit` (Kridoc and Verikora drop their own), `presignPut`.
 3. **Encryption per tenant**: `tenantStore` + `tenantVault` over the bucket, the tenant keyring migration, crypto-shredding on erasure.
 4. **Admin**: the settings registry, audit lines, retention and the orphan sweep.
-5. **Product API**: `storage_client` (product, tenant, token hash, actions), `/api/storage/v1/objects/{key}`, signed links, rate limits.
+5. **Product API** (built, krizaka-internal#3756): `storage_client` (product, tenant, token hash, scopes; `2026-11-18-storage-clients.sql`),
+   `/api/storage/v1/objects/{key}` (PUT, GET, HEAD, DELETE), `/api/storage/v1/objects?prefix=` (list), `/api/storage/v1/links/{key}`
+   (POST signs, GET opens), a limiter per client, audit lines. The contract: [the OpenAPI document](../architecture/kridoc-storage-api.v1.openapi.yaml)
+   and `objectStoreContract`, run against the routes through the reference client `apps/web/lib/storage/kridoc-api-store.ts`.
+   Choices of this slice:
+   - **Signed links are Kridoc's own.** The bucket holds ciphertext (`tenantStore` answers `null` to `signedUrl`), so a link is an
+     HMAC over `(client, key, expiry)` to Kridoc's `links` route, which opens the object and serves it; revoking the client kills its
+     links at once.
+   - **No second secret.** The tokens' hash key and the links' key are derived from `MEDIA_VAULT_KEY` by HKDF-SHA-256, one per
+     purpose (`lib/storage/derived-secrets.ts`). New root key material means reissuing the tokens.
+   - **Types.** A client declares a type from `SETTINGS.storageApi.types`; bytes of a known type must be that type, and may not hide
+     under `application/octet-stream`, the type of a product's own ciphertext (Verikora seals before it sends).
+   - **Tenants.** `<product>-<environment>`, never `account-…` (checked in code and by the table); a product's tenant shares the
+     installation's store and keyring with Kridoc's accounts, each under its own key.
+   - **Not yet:** audit lines go to the log until `@krizaka/audit` is wired (slice 4); the limiter counts per instance
+     (`dbLimitStore` when there are several); limits per tenant come with the admin's settings (slice 4); the reference client
+     belongs in `@krizaka/storage` (`kridocStore`), with the bounded body reader of `lib/storage/api-http.ts`.
 6. **Verikora's `kridoc` provider** and the verified move.
 7. **Infrastructure** (founder): the Canadian bucket and its keys; `MEDIA_STORAGE_ENABLED` on in dev, then prod.
 

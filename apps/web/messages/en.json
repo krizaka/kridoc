@@ -68,5 +68,20 @@
       "UNAUTHENTICATED": "Sign in to continue.",
       "INTERNAL": "Something went wrong on our side. Try again later."
     }
+  },
+  "storageApi": {
+    "errors": {
+      "STORAGE_API_OFF": "Not found.",
+      "STORAGE_UNAUTHENTICATED": "A valid storage token is required.",
+      "STORAGE_SCOPE_REFUSED": "This token may not do that.",
+      "STORAGE_OBJECT_NOT_FOUND": "This object does not exist.",
+      "STORAGE_KEY_REFUSED": "This key is not accepted.",
+      "STORAGE_OBJECT_TOO_BIG": "This object is empty or too large.",
+      "STORAGE_TYPE_REFUSED": "This type of content is not accepted.",
+      "STORAGE_LINK_REFUSED": "This link is not valid or has expired.",
+      "STORAGE_INVALID_INPUT": "The request is not valid.",
+      "RATE_LIMITED": "Too many requests. Try again later.",
+      "INTERNAL": "Something went wrong on our side. Try again later."
+    }
   }
 }
