@@ -9,7 +9,7 @@ import { type AuthService, type Caller, createAuthService, type OpenedSession } 
 import { parseInput } from "@/lib/auth/credentials";
 import { AUTH_ERROR, AuthError } from "@/lib/auth/errors";
 import { jsonBody, jsonOf, refusal } from "@/lib/auth/http";
-import { sessionCookieOf, tokenOfRequest } from "@/lib/auth/session-cookie";
+import { sessionCookieOf } from "@/lib/auth/session-cookie";
 import { databaseOf } from "@/lib/db/connection";
 import { type Env, readEnv, SETTINGS } from "@/lib/env";
 
@@ -52,8 +52,6 @@ export const callerOf = (headers: Headers, env: Env): Caller => ({
   ip: clientIp(headers, { header: env.ABUSE_CLIENT_IP_HEADER, trustedProxyHops: env.ABUSE_TRUSTED_PROXY_HOPS }),
   userAgent: headers.get("user-agent"),
 });
-
-export { tokenOfRequest };
 
 /** A sign-in or a sign-up route, whole: the feature check, the body parsed at the edge, the one service call, the session cookie and the answer. */
 export async function sessionRoute<T>(

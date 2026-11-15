@@ -25,7 +25,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
+try {
+  await main();
+} catch (error: unknown) {
   console.error(
     error instanceof AuthError
       ? `auth:create-admin refused: ${error.code} (needs DATABASE_URL, AUTH_ADMIN_EMAIL, AUTH_ADMIN_PASSWORD of 12+ characters)`
@@ -33,4 +35,4 @@ main().catch((error: unknown) => {
   );
   if (!(error instanceof AuthError)) console.error(error instanceof Error ? error.name : error);
   process.exit(1);
-});
+}

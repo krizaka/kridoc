@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
 
-import { accountsRuntime, tokenOfRequest } from "@/app/accounts-edge";
+import { accountsRuntime } from "@/app/accounts-edge";
 import { jsonOf, refusal } from "@/lib/auth/http";
-import { clearedCookieOf } from "@/lib/auth/session-cookie";
+import { clearedCookieOf, tokenOfRequest } from "@/lib/auth/session-cookie";
 
 export const dynamic = "force-dynamic";
 
