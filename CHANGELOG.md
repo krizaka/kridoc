@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/krizaka/kridoc/compare/v0.6.0...v0.7.0) (2026-11-15)
+
+
+### Features
+
+* **storage:** each account's documents under its own key, shredded on erasure ([#57](https://github.com/krizaka/kridoc/issues/57)) ([664af40](https://github.com/krizaka/kridoc/commit/664af40a1859430a2da14d871d61869125fc38bc))
+
 ## [0.6.0](https://github.com/krizaka/kridoc/compare/v0.5.0...v0.6.0) (2026-11-15)
 
 
