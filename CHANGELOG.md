@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/krizaka/kridoc/compare/v0.2.6...v0.3.0) (2026-11-15)
+
+
+### Features
+
+* **platform:** server runtime and typed environment ([#47](https://github.com/krizaka/kridoc/issues/47)) ([67ea912](https://github.com/krizaka/kridoc/commit/67ea9121b3190d0b1e01dfe50202db972f72db71))
+
+
+### Bug Fixes
+
+* **env:** production requires no key until a feature needs it (krizaka-internal[#3716](https://github.com/krizaka/kridoc/issues/3716)) ([#49](https://github.com/krizaka/kridoc/issues/49)) ([1e0d5ec](https://github.com/krizaka/kridoc/commit/1e0d5ec9ee2d773039ca164d747122ffe57fc356))
+
 ## [0.2.6](https://github.com/krizaka/kridoc/compare/v0.2.5...v0.2.6) (2026-11-14)
 
 
