@@ -2,7 +2,7 @@
   "name": "kridoc-monorepo",
   "version": "0.3.0",
   "private": true,
-  "description": "Kridoc — started from krizaka/template-next-app.",
+  "description": "Kridoc \u2014 started from krizaka/template-next-app.",
   "packageManager": "pnpm@10.34.6",
   "scripts": {
     "dev": "turbo run dev --filter=@kridoc/web",
@@ -19,7 +19,8 @@
     "sg:ratchet:update": "krizaka-sg-ratchet --update",
     "sg:fix": "node scripts/sg-fix.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css}\"",
+    "db:rebuild": "pnpm --filter @kridoc/web db:rebuild"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.51.0",
