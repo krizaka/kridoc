@@ -6,6 +6,10 @@ export NODE_ENV=production PORT=3000
 # The keys the production boot requires (PRODUCTION_REQUIREMENTS in apps/web/lib/env.ts), as throwaway CI values: the database feature stays off (DATABASE_ENABLED), so none is used; the accounts feature stays off too (AUTH_ENABLED), so the session secret is a placeholder.
 export DATABASE_URL=postgresql://ci:ci-only-password@localhost:5432/ci DATABASE_CA_CERT=ci-placeholder
 export AUTH_ENABLED=off AUTH_SESSION_SECRET=ci-only-placeholder-not-a-real-secret-0000
+# The documents feature stays off too (MEDIA_STORAGE_ENABLED): its provider, tenant and bucket keys are placeholders nothing reads.
+export MEDIA_STORAGE_ENABLED=off MEDIA_STORAGE_PROVIDER=s3 MEDIA_DOCUMENTS_TENANT=kridoc-ci
+export MEDIA_S3_ENDPOINT=https://tor1.digitaloceanspaces.com MEDIA_S3_REGION=tor1 MEDIA_S3_BUCKET=ci-placeholder
+export MEDIA_S3_ACCESS_KEY_ID=ci-placeholder MEDIA_S3_SECRET_ACCESS_KEY=ci-placeholder
 trap 'tail -100 web.log || true' ERR
 (cd apps/web && pnpm exec next start -p 3000 > ../../web.log 2>&1 &)
 for _ in $(seq 1 60); do curl -sf http://localhost:3000/api/healthz && break; sleep 1; done

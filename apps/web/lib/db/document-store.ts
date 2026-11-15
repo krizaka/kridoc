@@ -1,25 +1,6 @@
 import type { Query } from "@krizaka/db";
 
-/** The metadata of a stored document (the bytes live in object storage, not here). */
-export interface DocumentRecord {
-  id: string;
-  ownerId: string;
-  title: string;
-  mediaType: string;
-  sizeBytes: number;
-  createdAt: Date;
-}
-
-export type NewDocument = Pick<DocumentRecord, "ownerId" | "title" | "mediaType" | "sizeBytes">;
-
-/** The port: the only door to the document tables. Services depend on this, never on SQL. */
-export interface DocumentStore {
-  add(document: NewDocument): Promise<DocumentRecord>;
-  /** The owner's documents, newest first, at most `limit` (never an unbounded read). */
-  listByOwner(ownerId: string, limit?: number): Promise<DocumentRecord[]>;
-  /** One document, only when it belongs to the owner (never another owner's). */
-  findForOwner(ownerId: string, id: string): Promise<DocumentRecord | null>;
-}
+import type { DocumentRecord, DocumentStore } from "@/lib/storage/document-port";
 
 // @fixed: the default and the ceiling of one page of documents, a technical bound of the read
 export const LIST_LIMIT = { default: 50, max: 200 } as const;
@@ -49,8 +30,8 @@ export function createDocumentStore(query: Query): DocumentStore {
   return {
     async add(document) {
       const [row] = await query<Row>(
-        `INSERT INTO document (owner_id, title, media_type, size_bytes) VALUES ($1, $2, $3, $4) RETURNING ${COLUMNS}`,
-        [document.ownerId, document.title, document.mediaType, document.sizeBytes],
+        `INSERT INTO document (id, owner_id, title, media_type, size_bytes) VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, $5) RETURNING ${COLUMNS}`,
+        [document.id ?? null, document.ownerId, document.title, document.mediaType, document.sizeBytes],
       );
       return recordOf(row!);
     },
@@ -65,6 +46,10 @@ export function createDocumentStore(query: Query): DocumentStore {
     async findForOwner(ownerId, id) {
       const [row] = await query<Row>(`SELECT ${COLUMNS} FROM document WHERE owner_id = $1 AND id = $2`, [ownerId, id]);
       return row ? recordOf(row) : null;
+    },
+    async removeForOwner(ownerId, id) {
+      const rows = await query(`DELETE FROM document WHERE owner_id = $1 AND id = $2 RETURNING id`, [ownerId, id]);
+      return rows.length > 0;
     },
   };
 }

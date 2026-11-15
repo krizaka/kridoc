@@ -1,4 +1,7 @@
+import { residencyOfConfig } from "@krizaka/storage";
 import { z } from "zod";
+
+import { STORAGE_PROVIDER } from "@/lib/storage/providers";
 
 /** Settings as data: what the server asks of its environment, changed here and nowhere else. */
 export const SETTINGS = {
@@ -11,7 +14,15 @@ export const SETTINGS = {
   signIn: { perIp: 30, perSubject: 10, windowSeconds: 900 },
   /** Sign-up tries an address may make in one window (when sign-up is open). */
   signUp: { perIp: 10, windowSeconds: 3600 },
+  /** Kridoc's own documents: the largest file and the types its bytes may be (checked by magic number, never by name). */
+  documents: {
+    maxBytes: 25 * 1024 * 1024,
+    types: ["application/pdf", "image/png", "image/jpeg", "image/webp"],
+  },
 } as const;
+
+/** An installation's tenant id: the prefix of every key (letters, digits, - or _; `assertTenantId` of @krizaka/storage). */
+const TENANT_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 /**
  * Every environment variable of the app, declared once, named by bounded context (APP_, DATABASE_, AUTH_, MAIL_, MEDIA_, ABUSE_, AI_…)
@@ -37,6 +48,21 @@ export const envSchema = z.object({
   AUTH_SIGNUP: z.enum(["open", "closed"]).default("closed"),
   /** Keys the stored hash of the session tokens of Kridoc's own users, a secret (at least SETTINGS.sessionSecretMinLength characters). */
   AUTH_SESSION_SECRET: z.string().optional(),
+  /** The documents feature (Kridoc's own documents in object storage): `off` until the founder turns it on; off, no document route answers. */
+  MEDIA_STORAGE_ENABLED: z.enum(["on", "off"]).default("off"),
+  /** `local` (a folder, development only) or `s3` (an S3-compatible bucket in a Canadian region, the only one production accepts). */
+  MEDIA_STORAGE_PROVIDER: z.enum([STORAGE_PROVIDER.local, STORAGE_PROVIDER.s3]).default(STORAGE_PROVIDER.local),
+  /** The folder of the `local` provider. */
+  MEDIA_STORAGE_ROOT: z.string().default(".data/documents"),
+  /** The installation's tenant id (`kridoc-prod`): every key lives under it. Read once at the edge, never from a request. */
+  MEDIA_DOCUMENTS_TENANT: z.string().regex(TENANT_ID).optional(),
+  /** The bucket of the `s3` provider: its origin (`https://tor1.digitaloceanspaces.com`), region (`tor1`) and name. */
+  MEDIA_S3_ENDPOINT: z.string().url().optional(),
+  MEDIA_S3_REGION: z.string().optional(),
+  MEDIA_S3_BUCKET: z.string().optional(),
+  /** The bucket's key, scoped to that bucket: secrets. */
+  MEDIA_S3_ACCESS_KEY_ID: z.string().optional(),
+  MEDIA_S3_SECRET_ACCESS_KEY: z.string().optional(),
   /** The header the edge sets with the client's address (`do-connecting-ip` on DigitalOcean App Platform). */
   ABUSE_CLIENT_IP_HEADER: z.string().default("do-connecting-ip"),
   /** How many trusted proxies append to X-Forwarded-For. */
@@ -65,6 +91,63 @@ export const asksForTls = (url: string): boolean => /[?&]sslmode=(require|verify
  * SETTINGS.sessionSecretMinLength characters) must be set. A key required here must also be exported by scripts/ci-after-build.sh and
  * declared in .do/app.yaml (tests/ci-boot-env.test.ts).
  */
+/** The documents feature is on with the bucket provider: then the bucket's coordinates and keys are needed. */
+const usesBucket = (env: Env): boolean =>
+  env.MEDIA_STORAGE_ENABLED === "on" && env.MEDIA_STORAGE_PROVIDER === STORAGE_PROVIDER.s3;
+
+/** A bucket setting the documents feature needs: named when it is missing. */
+const bucketSetting = (
+  key: "MEDIA_S3_ENDPOINT" | "MEDIA_S3_BUCKET" | "MEDIA_S3_ACCESS_KEY_ID" | "MEDIA_S3_SECRET_ACCESS_KEY",
+): Requirement => ({
+  key,
+  check: (env) => (usesBucket(env) && !env[key] ? `${key} is not set (the documents feature is on)` : null),
+});
+
+/** Law 25: the region AND the endpoint must be Canadian (`residencyOfConfig` of @krizaka/storage), never a guess in Canada's favour. */
+const canadianRegion = (env: Env): string | null => {
+  if (!usesBucket(env)) return null;
+  if (!env.MEDIA_S3_REGION) return "MEDIA_S3_REGION is not set (the documents feature is on)";
+  if (!env.MEDIA_S3_ENDPOINT) return null;
+  return residencyOfConfig({ provider: "s3", endpoint: env.MEDIA_S3_ENDPOINT, region: env.MEDIA_S3_REGION }) ===
+    "canada"
+    ? null
+    : "MEDIA_S3_REGION has no Canadian residency (Law 25: documents stay in Canada)";
+};
+
+/**
+ * Slice D (krizaka-internal#3719): when MEDIA_STORAGE_ENABLED is `on`, production needs the accounts feature (a document has an owner), the
+ * `s3` provider (a folder has no residency, and an App Platform disk is wiped at each deploy), its settings with a Canadian region, and the
+ * installation's tenant id.
+ */
+const DOCUMENTS_REQUIREMENTS: readonly Requirement[] = [
+  {
+    key: "MEDIA_STORAGE_ENABLED",
+    check: (env) =>
+      env.MEDIA_STORAGE_ENABLED === "on" && env.AUTH_ENABLED !== "on"
+        ? "AUTH_ENABLED is not on (the documents feature needs the accounts)"
+        : null,
+  },
+  {
+    key: "MEDIA_STORAGE_PROVIDER",
+    check: (env) =>
+      env.MEDIA_STORAGE_ENABLED === "on" && env.MEDIA_STORAGE_PROVIDER !== STORAGE_PROVIDER.s3
+        ? "MEDIA_STORAGE_PROVIDER must be s3 in production (a local folder has no Canadian residency)"
+        : null,
+  },
+  {
+    key: "MEDIA_DOCUMENTS_TENANT",
+    check: (env) =>
+      env.MEDIA_STORAGE_ENABLED === "on" && !env.MEDIA_DOCUMENTS_TENANT
+        ? "MEDIA_DOCUMENTS_TENANT is not set (the installation's tenant id, e.g. kridoc-prod)"
+        : null,
+  },
+  bucketSetting("MEDIA_S3_ENDPOINT"),
+  { key: "MEDIA_S3_REGION", check: canadianRegion },
+  bucketSetting("MEDIA_S3_BUCKET"),
+  bucketSetting("MEDIA_S3_ACCESS_KEY_ID"),
+  bucketSetting("MEDIA_S3_SECRET_ACCESS_KEY"),
+];
+
 export const PRODUCTION_REQUIREMENTS: readonly Requirement[] = [
   {
     key: "DATABASE_URL",
@@ -97,6 +180,7 @@ export const PRODUCTION_REQUIREMENTS: readonly Requirement[] = [
         : null;
     },
   },
+  ...DOCUMENTS_REQUIREMENTS,
 ];
 
 /** What a production server cannot run without — named, never shown. Nothing is asked outside production. */

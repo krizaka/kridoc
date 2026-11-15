@@ -57,5 +57,16 @@
       "UNAUTHENTICATED": "Connectez-vous pour continuer.",
       "INTERNAL": "Un problème est survenu de notre côté. Réessayez plus tard."
     }
+  },
+  "documents": {
+    "errors": {
+      "DOCUMENTS_OFF": "Introuvable.",
+      "DOCUMENT_NOT_FOUND": "Ce document n'existe pas.",
+      "NO_FILE": "Choisissez un fichier à envoyer.",
+      "FILE_TOO_BIG": "Ce fichier est trop gros.",
+      "FILE_TYPE_REFUSED": "Ce type de fichier n'est pas accepté.",
+      "UNAUTHENTICATED": "Connectez-vous pour continuer.",
+      "INTERNAL": "Une erreur est survenue de notre côté. Réessayez plus tard."
+    }
   }
 }

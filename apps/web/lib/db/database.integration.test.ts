@@ -2,8 +2,10 @@ import { createTestDatabase, endPool, type TestDatabase } from "@krizaka/db/test
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import type { DocumentStore } from "@/lib/storage/document-port";
+
 import { connectionOf } from "./connection";
-import { createDocumentStore, type DocumentStore, LIST_LIMIT } from "./document-store";
+import { createDocumentStore, LIST_LIMIT } from "./document-store";
 import { integrationPools } from "./integration-pool";
 import { migrateDatabase } from "./migrations";
 
@@ -73,6 +75,21 @@ describe("Kridoc's database", () => {
 
   it("refuses a document whose owner has no account", async () => {
     await expect(store.add({ ownerId: "00000000-0000-4000-8000-0000000000ff", ...FILE })).rejects.toThrow();
+  });
+
+  it("keeps the id the caller chose (the key of the bytes is made from it first)", async () => {
+    const id = "00000000-0000-4000-8000-0000000000c1";
+    expect((await store.add({ id, ownerId: OWNER, ...FILE })).id).toBe(id);
+    await expect(store.add({ id, ownerId: OWNER, ...FILE })).rejects.toThrow();
+  });
+
+  it("removes a document for its owner only", async () => {
+    const added = await store.add({ ownerId: OWNER, ...FILE });
+    expect(await store.removeForOwner(STRANGER, added.id)).toBe(false);
+    expect(await store.findForOwner(OWNER, added.id)).toEqual(added);
+    expect(await store.removeForOwner(OWNER, added.id)).toBe(true);
+    expect(await store.findForOwner(OWNER, added.id)).toBeNull();
+    expect(await store.removeForOwner(OWNER, added.id)).toBe(false);
   });
 
   it("refuses what the schema forbids", async () => {

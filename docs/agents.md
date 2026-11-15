@@ -25,6 +25,14 @@ every string in `messages/*.json`, `@krizaka/ui` blocks, tests with every change
   account route and page answers 404 and nothing is required. On, production requires `DATABASE_ENABLED=on` and `AUTH_SESSION_SECRET` (32+ characters).
   Sign-up is closed (`AUTH_SIGNUP=closed`, the default); the first administrator is made by `pnpm auth:create-admin` (`AUTH_ADMIN_EMAIL`,
   `AUTH_ADMIN_PASSWORD` from the environment, never argv). The rate-limit counters are in memory (one instance); a shared store is a follow-up. No password, hash or token is ever logged.
+- **Documents** (krizaka-internal#3719, design in [docs/design/storage-service.md](design/storage-service.md)): Kridoc's own documents, metadata in
+  `document`, bytes in an `ObjectStore` of `@krizaka/storage` (`apps/web/lib/storage/object-store.ts`: a folder `<MEDIA_STORAGE_ROOT>/<tenant>/` in
+  development, a bucket under `t/<tenant>/` in production). `document-service.ts` reaches a document only through its owner's row (another's is
+  « not found »); the composition root is `apps/web/app/documents-edge.ts`; routes `app/api/documents` (list, upload) and `app/api/documents/[id]`
+  (download, delete) are thin; refusals are `DocumentError`s mapped once in `lib/storage/http.ts` (words under `documents.errors`). Limits are
+  `SETTINGS.documents`. Off by default (`MEDIA_STORAGE_ENABLED`): every document route answers 404. On, production requires `AUTH_ENABLED=on`,
+  `MEDIA_STORAGE_PROVIDER=s3`, `MEDIA_DOCUMENTS_TENANT` and the `MEDIA_S3_*` settings with a Canadian region (Law 25). No live bucket in CI: the
+  bucket adapter runs `objectStoreContract` on a fake S3.
 - `dev-preview.json` is data: `devPreview` is claimed only when every criterion has fresh evidence.
 
 ## 9. Anti-slop (ADR-015)
