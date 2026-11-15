@@ -1,14 +1,16 @@
+import { randomBytes } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { ObjectStore } from "@krizaka/storage";
+import { memoryTenantKeyStore, type ObjectStore } from "@krizaka/storage";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { SETTINGS } from "@/lib/env";
 
-import type { DocumentRecord, DocumentStore, NewDocument } from "./document-port";
+import type { DocumentRecord, DocumentStore, NewDocument, OwnerObjects } from "./document-port";
 import { createDocumentService, type DocumentService, documentView, objectKeyOf } from "./document-service";
+import { accountTenantOf, ownerObjectsOf } from "./document-vault";
 import { objectStoreOf } from "./object-store";
 import { STORAGE_PROVIDER } from "./providers";
 
@@ -46,14 +48,15 @@ function memoryDocumentStore(): DocumentStore & { failNextAdd(): void } {
 
 describe("Kridoc's documents on the local adapter", () => {
   let root: string;
-  let objects: ObjectStore;
+  let bucket: ObjectStore;
+  let objects: OwnerObjects;
   let documents: ReturnType<typeof memoryDocumentStore>;
   let service: DocumentService;
   let ids: number;
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), "kridoc-documents-"));
-    objects = objectStoreOf(
+    bucket = objectStoreOf(
       { provider: STORAGE_PROVIDER.local, tenant: "kridoc-test", root },
       {
         fetch: async () => {
@@ -62,6 +65,12 @@ describe("Kridoc's documents on the local adapter", () => {
         clock: { now: () => AT },
       },
     );
+    objects = ownerObjectsOf(bucket, {
+      rootKey: randomBytes(32).toString("base64"),
+      keys: memoryTenantKeyStore(),
+      clock: { now: () => AT },
+      audit: async () => {},
+    });
     documents = memoryDocumentStore();
     ids = 0;
     service = createDocumentService({
@@ -103,21 +112,43 @@ describe("Kridoc's documents on the local adapter", () => {
     expect([...(await service.read(A, record.id)).bytes]).toEqual([...PDF]);
   });
 
-  it("keeps the bytes by owner and id, under the installation's tenant folder", async () => {
+  it("keeps the bytes by owner and id, sealed under the owner's key, inside the installation's tenant folder", async () => {
     const record = await service.upload(A, { bytes: PDF, name: "../../etc/passwd" });
     expect(record.title).toBe("../../etc/passwd");
-    expect(await objects.head(objectKeyOf(A, record.id))).toEqual({
-      key: objectKeyOf(A, record.id),
+    expect(await objects.of(A).head(objectKeyOf(record.id))).toEqual({
+      key: objectKeyOf(record.id),
       size: PDF.byteLength,
     });
-    const onDisk = await readFile(join(root, "kridoc-test", "documents", A, record.id));
-    expect([...onDisk]).toEqual([...PDF]);
+    const onDisk = await readFile(join(root, "kridoc-test", "t", accountTenantOf(A), "documents", record.id));
+    expect(onDisk.includes(Buffer.from("%PDF"))).toBe(false);
+    expect(onDisk.byteLength).toBeGreaterThan(PDF.byteLength);
+  });
+
+  it("erases an account: its key is shredded first, its objects are gone, its documents never open again; B is untouched", async () => {
+    const mine = await service.upload(A, { bytes: PDF, name: "bail.pdf" });
+    const theirs = await service.upload(B, { bytes: PDF, name: "bail.pdf" });
+    await service.eraseOwner(A);
+    expect(await bucket.list(`t/${accountTenantOf(A)}/`)).toEqual([]);
+    // The metadata row goes with the account (ON DELETE CASCADE); until then the document reads as « not found ».
+    await expect(service.read(A, mine.id)).rejects.toMatchObject({ code: "DOCUMENT_NOT_FOUND" });
+    await expect(objects.of(A).put("documents/x", PDF, { contentType: "application/pdf" })).rejects.toMatchObject({
+      code: "STORAGE_TENANT_SHREDDED",
+    });
+    expect([...(await service.read(B, theirs.id)).bytes]).toEqual([...PDF]);
+    // Idempotent: an erasure that stopped half-way is run again.
+    await expect(service.eraseOwner(A)).resolves.toBeUndefined();
+  });
+
+  it("answers « not found » for a document whose owner's key was shredded but whose bytes are still in the bucket", async () => {
+    const record = await service.upload(A, { bytes: PDF, name: "bail.pdf" });
+    await objects.shred(A);
+    await expect(service.read(A, record.id)).rejects.toMatchObject({ code: "DOCUMENT_NOT_FOUND" });
   });
 
   it("deletes the metadata and the bytes; a second delete is « not found »", async () => {
     const record = await service.upload(A, { bytes: PDF, name: "bail.pdf" });
     await service.remove(A, record.id);
-    expect(await objects.get(objectKeyOf(A, record.id))).toBeNull();
+    expect(await objects.of(A).get(objectKeyOf(record.id))).toBeNull();
     expect(await service.list(A)).toEqual([]);
     await expect(service.remove(A, record.id)).rejects.toMatchObject({ code: "DOCUMENT_NOT_FOUND" });
     await expect(service.read(A, record.id)).rejects.toMatchObject({ code: "DOCUMENT_NOT_FOUND" });
@@ -137,7 +168,7 @@ describe("Kridoc's documents on the local adapter", () => {
       limits: { maxBytes: 8, types: SETTINGS.documents.types },
     });
     await expect(small.upload(A, { bytes: PDF, name: "bail.pdf" })).rejects.toMatchObject({ code: "FILE_TOO_BIG" });
-    expect(await objects.list("documents/")).toEqual([]);
+    expect(await bucket.list("")).toEqual([]);
     expect(await service.list(A)).toEqual([]);
   });
 
@@ -146,7 +177,7 @@ describe("Kridoc's documents on the local adapter", () => {
     await expect(service.upload(A, { bytes: PDF, name: "bail.pdf" })).rejects.toThrow(
       "the database refused the insert",
     );
-    expect(await objects.list("documents/")).toEqual([]);
+    expect(await bucket.list("")).toEqual([]);
   });
 
   it("answers « not found » for an id that is not a document id, without asking the database", async () => {

@@ -59,6 +59,7 @@ describe("production environment", () => {
       "MEDIA_STORAGE_ENABLED",
       "MEDIA_STORAGE_PROVIDER",
       "MEDIA_DOCUMENTS_TENANT",
+      "MEDIA_VAULT_KEY",
       "MEDIA_S3_ENDPOINT",
       "MEDIA_S3_REGION",
       "MEDIA_S3_BUCKET",
@@ -128,6 +129,7 @@ const ACCOUNTS_ON = {
 const TORONTO = {
   MEDIA_STORAGE_PROVIDER: "s3",
   MEDIA_DOCUMENTS_TENANT: "kridoc-prod",
+  MEDIA_VAULT_KEY: Buffer.alloc(32, 7).toString("base64"),
   MEDIA_S3_ENDPOINT: "https://tor1.digitaloceanspaces.com",
   MEDIA_S3_REGION: "tor1",
   MEDIA_S3_BUCKET: "kridoc-documents",
@@ -145,11 +147,13 @@ describe("production environment of the documents feature (krizaka-internal#3719
       "AUTH_ENABLED is not on (the documents feature needs the accounts)",
       "MEDIA_STORAGE_PROVIDER must be s3 in production (a local folder has no Canadian residency)",
       "MEDIA_DOCUMENTS_TENANT is not set (the installation's tenant id, e.g. kridoc-prod)",
+      "MEDIA_VAULT_KEY is not set (the root key of the documents' keys)",
     ]);
     expect(
       productionProblems(production({ ...ACCOUNTS_ON, MEDIA_STORAGE_ENABLED: "on", MEDIA_STORAGE_PROVIDER: "s3" })),
     ).toEqual([
       "MEDIA_DOCUMENTS_TENANT is not set (the installation's tenant id, e.g. kridoc-prod)",
+      "MEDIA_VAULT_KEY is not set (the root key of the documents' keys)",
       "MEDIA_S3_ENDPOINT is not set (the documents feature is on)",
       "MEDIA_S3_REGION is not set (the documents feature is on)",
       "MEDIA_S3_BUCKET is not set (the documents feature is on)",
@@ -159,6 +163,16 @@ describe("production environment of the documents feature (krizaka-internal#3719
   });
   it("starts with the documents on a Toronto bucket", () => {
     expect(productionProblems(production({ ...ACCOUNTS_ON, ...TORONTO, MEDIA_STORAGE_ENABLED: "on" }))).toEqual([]);
+  });
+  it("refuses a root key that is not 32 bytes in base64, never showing it (krizaka-internal#3754)", () => {
+    for (const bad of ["too-short", Buffer.alloc(16, 1).toString("base64"), Buffer.alloc(33, 1).toString("base64")]) {
+      const problems = productionProblems(
+        production({ ...ACCOUNTS_ON, ...TORONTO, MEDIA_VAULT_KEY: bad, MEDIA_STORAGE_ENABLED: "on" }),
+      );
+      expect(problems).toEqual(["MEDIA_VAULT_KEY is not 32 bytes in base64"]);
+      expect(problems.join(" ")).not.toContain(bad);
+    }
+    expect(productionProblems(production({ MEDIA_VAULT_KEY: "too-short" }))).toEqual([]);
   });
   it("refuses a bucket without a Canadian residency (Law 25), whether the region or the endpoint says it, never showing a key", () => {
     const refusal = ["MEDIA_S3_REGION has no Canadian residency (Law 25: documents stay in Canada)"];

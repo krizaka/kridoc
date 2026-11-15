@@ -56,6 +56,11 @@ export const envSchema = z.object({
   MEDIA_STORAGE_ROOT: z.string().default(".data/documents"),
   /** The installation's tenant id (`kridoc-prod`): every key lives under it. Read once at the edge, never from a request. */
   MEDIA_DOCUMENTS_TENANT: z.string().regex(TENANT_ID).optional(),
+  /**
+   * The root key of the documents' keys (krizaka-internal#3754): 32 bytes in base64, a secret from the secret store. It wraps each
+   * account's own key (kept wrapped in `storage.tenant_key`); it is never in the database and never logged.
+   */
+  MEDIA_VAULT_KEY: z.string().optional(),
   /** The bucket of the `s3` provider: its origin (`https://tor1.digitaloceanspaces.com`), region (`tor1`) and name. */
   MEDIA_S3_ENDPOINT: z.string().url().optional(),
   MEDIA_S3_REGION: z.string().optional(),
@@ -114,10 +119,32 @@ const canadianRegion = (env: Env): string | null => {
     : "MEDIA_S3_REGION has no Canadian residency (Law 25: documents stay in Canada)";
 };
 
+// @fixed: an AES-256 key is 32 bytes (`parseVaultKey` of @krizaka/storage refuses any other length)
+const VAULT_KEY_BYTES = 32;
+
+/**
+ * A root key the vault accepts: 32 bytes in base64. Read with `atob`, which the edge runtime has too (this file is also the edge's
+ * instrumentation, where the Node-only `parseVaultKey` is not exported); the vault parses it again with `parseVaultKey`.
+ */
+const isVaultKey = (value: string): boolean => {
+  try {
+    return atob(value).length === VAULT_KEY_BYTES;
+  } catch {
+    return false;
+  }
+};
+
+/** The documents feature on: its root key is set and is one. Named, never shown. */
+const vaultKey = (env: Env): string | null => {
+  if (env.MEDIA_STORAGE_ENABLED !== "on") return null;
+  if (!env.MEDIA_VAULT_KEY) return "MEDIA_VAULT_KEY is not set (the root key of the documents' keys)";
+  return isVaultKey(env.MEDIA_VAULT_KEY) ? null : "MEDIA_VAULT_KEY is not 32 bytes in base64";
+};
+
 /**
  * Slice D (krizaka-internal#3719): when MEDIA_STORAGE_ENABLED is `on`, production needs the accounts feature (a document has an owner), the
  * `s3` provider (a folder has no residency, and an App Platform disk is wiped at each deploy), its settings with a Canadian region, and the
- * installation's tenant id.
+ * installation's tenant id. Slice 3 (krizaka-internal#3754): and the root key that wraps each account's key (MEDIA_VAULT_KEY).
  */
 const DOCUMENTS_REQUIREMENTS: readonly Requirement[] = [
   {
@@ -141,6 +168,7 @@ const DOCUMENTS_REQUIREMENTS: readonly Requirement[] = [
         ? "MEDIA_DOCUMENTS_TENANT is not set (the installation's tenant id, e.g. kridoc-prod)"
         : null,
   },
+  { key: "MEDIA_VAULT_KEY", check: vaultKey },
   bucketSetting("MEDIA_S3_ENDPOINT"),
   { key: "MEDIA_S3_REGION", check: canadianRegion },
   bucketSetting("MEDIA_S3_BUCKET"),

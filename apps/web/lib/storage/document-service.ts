@@ -1,7 +1,7 @@
-import { type ObjectStore, sniffType } from "@krizaka/storage";
+import { sniffType, STORAGE_CODE, StorageError } from "@krizaka/storage";
 import { z } from "zod";
 
-import type { DocumentRecord, DocumentStore } from "./document-port";
+import type { DocumentRecord, DocumentStore, OwnerObjects } from "./document-port";
 import { DOCUMENT_ERROR, DocumentError } from "./errors";
 
 /** The rules every document obeys, passed in (SETTINGS.documents today, the admin's settings later). */
@@ -13,7 +13,8 @@ export interface DocumentLimits {
 
 export interface DocumentServiceDeps {
   documents: DocumentStore;
-  objects: ObjectStore;
+  /** The bytes, one sealed store per owner (envelope encryption per account, lib/storage/document-vault.ts). */
+  objects: OwnerObjects;
   newId: () => string;
   limits: DocumentLimits;
 }
@@ -39,8 +40,8 @@ const TITLE_MAX = 200;
 // @fixed: the title of a file that arrives with neither a title nor a name
 const UNTITLED = "Document";
 
-/** Where a document's bytes live in the installation's store: by owner and id, never by a name the client chose. */
-export const objectKeyOf = (ownerId: string, id: string): string => `documents/${ownerId}/${id}`;
+/** Where a document's bytes live in its owner's store (itself under the owner's prefix): by id, never by a name the client chose. */
+export const objectKeyOf = (id: string): string => `documents/${id}`;
 
 export const documentView = (record: DocumentRecord): DocumentView => ({
   id: record.id,
@@ -71,11 +72,27 @@ export interface DocumentService {
   read(ownerId: string, id: string): Promise<{ record: DocumentRecord; bytes: Uint8Array }>;
   /** @throws DocumentError `DOCUMENT_NOT_FOUND` for a document that is not the owner's. */
   remove(ownerId: string, id: string): Promise<void>;
+  /**
+   * Erasing an account (Law 25): the owner's key is shredded first, so every copy of their documents is unreadable at once (the
+   * bucket's, a replica's, a backup's), then their objects are deleted. Idempotent: an erasure that stopped half-way is run again.
+   * The metadata rows go with the account row (ON DELETE CASCADE).
+   */
+  eraseOwner(ownerId: string): Promise<void>;
+}
+
+/** The bytes of a document, or `null` when they are gone or can never open again (the owner's key was shredded). */
+async function bytesOf(objects: OwnerObjects, ownerId: string, id: string): Promise<Uint8Array | null> {
+  try {
+    return (await objects.of(ownerId).get(objectKeyOf(id)))?.bytes ?? null;
+  } catch (error) {
+    if (error instanceof StorageError && error.code === STORAGE_CODE.shredded) return null;
+    throw error;
+  }
 }
 
 /**
- * Kridoc's own documents: the metadata in the database (`DocumentStore`), the bytes in the installation's `ObjectStore`. Every read
- * starts from the owner's metadata, so a person reaches only their own documents. Ports in, typed `DocumentError` out.
+ * Kridoc's own documents: the metadata in the database (`DocumentStore`), the bytes in each owner's sealed store (`OwnerObjects`).
+ * Every read starts from the owner's metadata, so a person reaches only their own documents. Ports in, typed `DocumentError` out.
  */
 export function createDocumentService(deps: DocumentServiceDeps): DocumentService {
   const ownRecord = async (ownerId: string, id: string): Promise<DocumentRecord> => {
@@ -87,8 +104,9 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
     async upload(ownerId, file) {
       const mediaType = acceptedType(file.bytes, deps.limits);
       const id = deps.newId();
-      const key = objectKeyOf(ownerId, id);
-      await deps.objects.put(key, file.bytes, { contentType: mediaType });
+      const key = objectKeyOf(id);
+      const objects = deps.objects.of(ownerId);
+      await objects.put(key, file.bytes, { contentType: mediaType });
       try {
         return await deps.documents.add({
           id,
@@ -99,22 +117,27 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
         });
       } catch (error) {
         // No metadata, no bytes: a failed insert leaves nothing behind.
-        await deps.objects.delete(key);
+        await objects.delete(key);
         throw error;
       }
     },
     list: (ownerId) => deps.documents.listByOwner(ownerId),
     async read(ownerId, id) {
       const record = await ownRecord(ownerId, id);
-      const stored = await deps.objects.get(objectKeyOf(ownerId, id));
-      if (!stored) throw notFound();
-      return { record, bytes: stored.bytes };
+      const bytes = await bytesOf(deps.objects, ownerId, id);
+      if (!bytes) throw notFound();
+      return { record, bytes };
     },
     async remove(ownerId, id) {
       await ownRecord(ownerId, id);
       // The metadata first: once it is gone nobody reaches the bytes, and a failed delete of the bytes leaves an orphan the sweep finds.
       await deps.documents.removeForOwner(ownerId, id);
-      await deps.objects.delete(objectKeyOf(ownerId, id));
+      await deps.objects.of(ownerId).delete(objectKeyOf(id));
+    },
+    async eraseOwner(ownerId) {
+      await deps.objects.shred(ownerId);
+      const objects = deps.objects.of(ownerId);
+      for (const object of await objects.list("")) await objects.delete(object.key);
     },
   };
 }

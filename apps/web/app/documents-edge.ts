@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 
-import { STORAGE_CODE, StorageError } from "@krizaka/storage";
+import { dbTenantKeyStore, type KeyAuditNote, STORAGE_CODE, StorageError } from "@krizaka/storage";
 
 import { tokenOfRequest } from "@/lib/auth/session-cookie";
 import { databaseOf } from "@/lib/db/connection";
 import { createDocumentStore } from "@/lib/db/document-store";
 import { type Env, readEnv, SETTINGS } from "@/lib/env";
 import { createDocumentService, type DocumentService } from "@/lib/storage/document-service";
+import { ownerObjectsOf } from "@/lib/storage/document-vault";
 import { DOCUMENT_ERROR, DocumentError } from "@/lib/storage/errors";
 import { documentRefusal } from "@/lib/storage/http";
 import { objectStoreOf, platformFetch, type StorageConfig } from "@/lib/storage/object-store";
@@ -46,6 +47,21 @@ export function storageConfigOf(env: Env): StorageConfig {
   };
 }
 
+/**
+ * The root key of the documents' keys, from the secret store through the environment. Without it the feature refuses to run (production
+ * refuses to boot, lib/env.ts): a document is never kept unsealed.
+ */
+function rootKeyOf(env: Env): string {
+  if (!env.MEDIA_VAULT_KEY)
+    throw new StorageError(STORAGE_CODE.badConfig, "MEDIA_VAULT_KEY is not set (the documents feature is on)");
+  return env.MEDIA_VAULT_KEY;
+}
+
+/** A key event, until @krizaka/audit is wired (the admin slice): the action, the account's tenant and the numbers, never a key. */
+const logKeyEvent = async (note: KeyAuditNote): Promise<void> => {
+  console.info(`documents: ${note.action} ${note.target.id} ${JSON.stringify(note.detail)}`);
+};
+
 export interface DocumentsRuntime {
   service: DocumentService;
   /** The account of the request's session: the owner of every document it touches. */
@@ -59,7 +75,12 @@ export function documentsRuntime(env: Env = readEnv()): DocumentsRuntime {
   const { query } = databaseOf(env);
   const service = createDocumentService({
     documents: createDocumentStore(query),
-    objects: objectStoreOf(storageConfigOf(env), { fetch: platformFetch, clock: systemClock }),
+    objects: ownerObjectsOf(objectStoreOf(storageConfigOf(env), { fetch: platformFetch, clock: systemClock }), {
+      rootKey: rootKeyOf(env),
+      keys: dbTenantKeyStore(query),
+      clock: systemClock,
+      audit: logKeyEvent,
+    }),
     newId: randomUUID,
     limits: SETTINGS.documents,
   });

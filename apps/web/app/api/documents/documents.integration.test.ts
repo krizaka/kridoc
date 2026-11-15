@@ -1,4 +1,5 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -11,7 +12,9 @@ import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
 import { connectionOf, pool } from "@/lib/db/connection";
 import { integrationPools } from "@/lib/db/integration-pool";
 import { migrateDatabase } from "@/lib/db/migrations";
+import { accountTenantOf } from "@/lib/storage/document-vault";
 
+import { documentsRuntime } from "../../documents-edge";
 import { DELETE as deleteOne, GET as readOne } from "./[id]/route";
 import { GET as list, POST as upload } from "./route";
 
@@ -56,6 +59,7 @@ describe("Kridoc's documents through the routes", () => {
       DATABASE_ENABLED: "on",
       DATABASE_URL: target.toString(),
       AUTH_SESSION_SECRET: SECRET,
+      MEDIA_VAULT_KEY: randomBytes(32).toString("base64"),
     }))
       vi.stubEnv(key, value);
     const db = poolOn(testDatabase.name);
@@ -108,6 +112,35 @@ describe("Kridoc's documents through the routes", () => {
       (await deleteOne(new Request(`${BASE}/${document.id}`, as("a", { method: "DELETE" })), idOf(document.id))).status,
     ).toBe(204);
     expect((await readOne(new Request(`${BASE}/${document.id}`, as("a")), idOf(document.id))).status).toBe(404);
+  });
+
+  it("keeps only ciphertext on disk, and erasing A shreds A's key: A's documents never open again, B's still do", async () => {
+    const send = async (who: string) => {
+      const form = new FormData();
+      form.set("file", new File([PDF], "bail.pdf", { type: "application/pdf" }));
+      return (await (await upload(new Request(BASE, as(who, { method: "POST", body: form })))).json()).document;
+    };
+    const mine = await send("a");
+    const theirs = await send("b");
+    const folder = join(root, "kridoc-test", "t", accountTenantOf(A), "documents");
+    const sealed = await readFile(join(folder, mine.id));
+    expect(sealed.includes(Buffer.from("%PDF"))).toBe(false);
+
+    await documentsRuntime().service.eraseOwner(A);
+
+    expect(await readdir(folder)).toEqual([]);
+    const db = poolOn(testDatabase.name);
+    const ring = await db.query("SELECT shredded_at FROM storage.tenant_keyring WHERE tenant_id = $1", [
+      accountTenantOf(A),
+    ]);
+    expect(ring.rows[0]?.shredded_at).toBeInstanceOf(Date);
+    const left = await db.query("SELECT count(*)::int AS n FROM storage.tenant_key WHERE tenant_id = $1", [
+      accountTenantOf(A),
+    ]);
+    expect(left.rows[0]?.n).toBe(0);
+    expect((await readOne(new Request(`${BASE}/${mine.id}`, as("a")), idOf(mine.id))).status).toBe(404);
+    const own = await readOne(new Request(`${BASE}/${theirs.id}`, as("b")), idOf(theirs.id));
+    expect([...new Uint8Array(await own.arrayBuffer())]).toEqual([...PDF]);
   });
 
   it("refuses a request without a session before reading its body", async () => {
