@@ -27,8 +27,9 @@ export async function readMigrations(dir: string = MIGRATIONS_DIR): Promise<Prod
   if (bad.length > 0) {
     throw new Error(`migration files must be named YYYY-MM-DD-name.sql: ${bad.join(", ")}`);
   }
+  files.sort((a, b) => a.localeCompare(b));
   return Promise.all(
-    files.sort().map(async (name) => ({
+    files.map(async (name) => ({
       version: name.slice(0, -".sql".length),
       sql: await readFile(join(dir, name), "utf8"),
     })),
