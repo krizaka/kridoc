@@ -45,7 +45,9 @@ test.describe("the storage settings of the administrator", () => {
 
     // The audit shows who changed what, from what to what.
     await page.reload();
-    const feed = page.getByRole("region", { name: en.storageAdmin.auditTitle }).or(page.getByLabel(en.storageAdmin.auditTitle));
+    const feed = page
+      .getByRole("region", { name: en.storageAdmin.auditTitle })
+      .or(page.getByLabel(en.storageAdmin.auditTitle));
     await expect(feed.getByText(en.storageAdmin.actions["storage.settings.changed"])).toBeVisible();
     await expect(feed.getByText("storage.maxMb: 25 → 1")).toBeVisible();
     await expect(feed.getByText(ADMIN.email)).toBeVisible();
