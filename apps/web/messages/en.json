@@ -26,5 +26,36 @@
     "sourceAria": "Kridoc's source code on GitHub",
     "products": "Our products",
     "productsAria": "Krizaka's products on krizaka.com (in English)"
+  },
+  "auth": {
+    "meta": {
+      "signIn": "Sign in"
+    },
+    "signIn": {
+      "title": "Sign in",
+      "description": "Your Kridoc account.",
+      "promise": "Your company documents, filed and found.",
+      "email": "Email address",
+      "password": "Password",
+      "submit": "Sign in",
+      "closedTitle": "Sign-up closed",
+      "closed": "Kridoc is not open yet. Accounts are created by invitation.",
+      "back": "Back to the site",
+      "done": "Signed in.",
+      "failed": "Something went wrong. Try again."
+    },
+    "errors": {
+      "ACCOUNTS_OFF": "Not found.",
+      "INVALID_INPUT": "Check the address and the password, then try again.",
+      "INVALID_CREDENTIALS": "Wrong address or password.",
+      "ACCOUNT_LOCKED": "This account is locked after too many wrong passwords. Contact us to open it again.",
+      "SIGNUP_CLOSED": "Sign-up closed. Kridoc is not open yet.",
+      "EMAIL_TAKEN": "This address already has an account.",
+      "PASSWORD_TOO_SHORT": "The password is too short (12 characters at least).",
+      "PASSWORD_TOO_LONG": "The password is too long (256 characters at most).",
+      "RATE_LIMITED": "Too many tries. Wait a moment and try again.",
+      "UNAUTHENTICATED": "Sign in to continue.",
+      "INTERNAL": "Something went wrong on our side. Try again later."
+    }
   }
 }

@@ -10,15 +10,18 @@
     "typecheck": "tsc --noEmit",
     "check:code-names": "krizaka-code-names messages",
     "test": "vitest run --coverage",
+    "auth:create-admin": "esbuild scripts/create-admin.mts --bundle --platform=node --format=esm '--external:@krizaka/*' --external:pg --external:zod --log-level=warning --outfile=node_modules/.cache/create-admin.mjs && node node_modules/.cache/create-admin.mjs",
     "db:rebuild": "esbuild scripts/db-rebuild.mts --bundle --platform=node --format=esm '--external:@krizaka/*' --external:pg --external:zod --log-level=warning --outfile=node_modules/.cache/db-rebuild.mjs && node node_modules/.cache/db-rebuild.mjs"
   },
   "dependencies": {
+    "@krizaka/auth": "^0.14.0",
     "@krizaka/db": "0.3.1",
     "@krizaka/fonts": "0.5.4",
     "@krizaka/i18n": "^0.2.4",
     "@krizaka/icons": "^0.10.0",
     "@krizaka/org": "^1.5.0",
     "@krizaka/query": "^0.3.0",
+    "@krizaka/rate-limit": "^0.3.1",
     "@krizaka/tailwind": "^4.7.0",
     "@krizaka/time": "^0.2.0",
     "@krizaka/tokens": "^4.7.0",

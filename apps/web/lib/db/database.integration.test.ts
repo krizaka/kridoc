@@ -4,8 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { connectionOf } from "./connection";
 import { createDocumentStore, type DocumentStore, LIST_LIMIT } from "./document-store";
+import { integrationPools } from "./integration-pool";
 import { migrateDatabase } from "./migrations";
-import { poolConfig } from "./pool-config";
 
 /**
  * The SQL against a real PostgreSQL (CI's service container; locally a throwaway one, `DATABASE_URL=… pnpm test`). Never skipped:
@@ -18,20 +18,11 @@ const STRANGER = "00000000-0000-4000-8000-000000000002";
 const FILE = { title: "Lease", mediaType: "application/pdf", sizeBytes: 1234 };
 
 describe("Kridoc's database", () => {
-  const pools: pg.Pool[] = [];
+  const { poolOn, all } = integrationPools(url);
   let testDatabase: TestDatabase;
   let pool: pg.Pool;
   let store: DocumentStore;
   let connect: () => ReturnType<typeof connectionOf>;
-
-  const poolOn = (database?: string) => {
-    if (!url) throw new Error("DATABASE_URL is not set: the database tests never skip");
-    const target = new URL(url);
-    if (database) target.pathname = `/${database}`;
-    const made = new pg.Pool({ ...poolConfig({ DATABASE_URL: target.toString() }), max: 2 });
-    pools.push(made);
-    return made;
-  };
 
   beforeAll(async () => {
     testDatabase = await createTestDatabase({
@@ -44,10 +35,15 @@ describe("Kridoc's database", () => {
     pool = poolOn(testDatabase.name);
     connect = () => connectionOf(pool);
     store = createDocumentStore(async (text, values = []) => (await pool.query(text, values)).rows);
+    // A document belongs to an account (the foreign key of 2026-11-16-accounts-sessions): the two owners of these tests have one.
+    await pool.query(
+      `INSERT INTO account (id, email, password_hash) VALUES ($1, 'owner@example.com', 'x'), ($2, 'stranger@example.com', 'x')`,
+      [OWNER, STRANGER],
+    );
   });
 
   afterAll(async () => {
-    for (const made of pools) await endPool(made);
+    for (const made of all()) await endPool(made);
     await testDatabase?.drop();
   });
 
@@ -73,6 +69,10 @@ describe("Kridoc's database", () => {
     expect(listed.map((d) => d.title)).toEqual(["Doc 2", "Doc 1", "Doc 0"]);
     expect(await store.listByOwner(STRANGER, 2)).toHaveLength(2);
     expect(LIST_LIMIT.max).toBeGreaterThan(LIST_LIMIT.default);
+  });
+
+  it("refuses a document whose owner has no account", async () => {
+    await expect(store.add({ ownerId: "00000000-0000-4000-8000-0000000000ff", ...FILE })).rejects.toThrow();
   });
 
   it("refuses what the schema forbids", async () => {

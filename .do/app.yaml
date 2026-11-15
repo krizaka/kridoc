@@ -72,5 +72,15 @@ services:
       - key: DATABASE_CA_CERT
         scope: RUN_TIME
         type: SECRET
-      # No accounts yet: AUTH_SESSION_SECRET (a DO SECRET) is declared here by the slice that brings it (krizaka-internal#3718),
-      # together with its requirement in apps/web/lib/env.ts.
+      # Kridoc's own accounts (krizaka-internal#3718): off until the founder turns them on. With AUTH_ENABLED on, the boot requires
+      # DATABASE_ENABLED on and AUTH_SESSION_SECRET of 32 characters or more (apps/web/lib/env.ts). AUTH_SIGNUP stays closed:
+      # the first administrator is made with `pnpm auth:create-admin`.
+      - key: AUTH_ENABLED
+        scope: RUN_TIME
+        value: "off"
+      - key: AUTH_SIGNUP
+        scope: RUN_TIME
+        value: closed
+      - key: AUTH_SESSION_SECRET
+        scope: RUN_TIME
+        type: SECRET
