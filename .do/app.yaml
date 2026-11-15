@@ -61,14 +61,5 @@ services:
       - key: APP_SEARCH_INDEXING
         scope: RUN_AND_BUILD_TIME
         value: "on"
-      # The server edge (krizaka-internal#3716): the app refuses to start in production without these (apps/web/lib/env.ts).
-      # Names only: the values are DO SECRETs filled at apply time, never in this file.
-      - key: DATABASE_URL
-        scope: RUN_TIME
-        type: SECRET
-      - key: DATABASE_CA_CERT
-        scope: RUN_TIME
-        type: SECRET
-      - key: AUTH_SESSION_SECRET
-        scope: RUN_TIME
-        type: SECRET
+      # No database and no accounts yet: DATABASE_URL, DATABASE_CA_CERT and AUTH_SESSION_SECRET (DO SECRETs) are declared here by the slice
+      # that brings their feature (krizaka-internal#3717, #3718), together with their requirement in apps/web/lib/env.ts.
