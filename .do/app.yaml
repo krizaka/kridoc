@@ -1,7 +1,7 @@
 # Kridoc - DigitalOcean App Platform (TOR1), a Next.js service: www.kridoc.com (krizaka-internal#2301, founder 2026-11-03:
 # a real web app from day one, the coming-soon page is its stable face and the product is built behind it).
 # The app deploys from `production`, never from main: a published release fast-forwards it to the tag (.github/workflows/production.yml).
-# Created by the CTO from this file; nothing here is applied by an agent. Secrets (none yet) are DO SECRETs filled at apply time.
+# Created by the CTO from this file; nothing here is applied by an agent. Secrets are DO SECRETs (type: SECRET, no value here), filled at apply time by the founder.
 #
 # ROUTES: App Platform's ingress match is prefix/exact only - NO regex. The apex answers 308 with www (the family's www rule,
 # krizaka/.github#119) and everything else goes to the one component; the fine routing is the app's (proxy.ts).
@@ -61,3 +61,14 @@ services:
       - key: APP_SEARCH_INDEXING
         scope: RUN_AND_BUILD_TIME
         value: "on"
+      # The server edge (krizaka-internal#3716): the app refuses to start in production without these (apps/web/lib/env.ts).
+      # Names only: the values are DO SECRETs filled at apply time, never in this file.
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: DATABASE_CA_CERT
+        scope: RUN_TIME
+        type: SECRET
+      - key: AUTH_SESSION_SECRET
+        scope: RUN_TIME
+        type: SECRET
