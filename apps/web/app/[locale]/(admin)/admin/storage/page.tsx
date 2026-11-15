@@ -10,7 +10,7 @@ import { StorageSettingsForm } from "@/components/StorageSettingsForm";
 import { ACCOUNT_ROLE } from "@/lib/auth/account-store";
 import { AUTH_ERROR, AuthError } from "@/lib/auth/errors";
 import { readEnv } from "@/lib/env";
-import { asLocale, format, getDictionary,type Messages } from "@/lib/i18n";
+import { asLocale, format, getDictionary, type Messages } from "@/lib/i18n";
 import { storageAuditEventOf } from "@/lib/storage/storage-audit-view";
 import { STORAGE_SETTING } from "@/lib/storage/storage-settings";
 import type { StorageSettingView } from "@/lib/storage/storage-settings-admin";
