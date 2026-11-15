@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/krizaka/kridoc/compare/v0.5.0...v0.6.0) (2026-11-15)
+
+
+### Features
+
+* **storage:** Kridoc's own documents behind @krizaka/storage, data in Canada (krizaka-internal[#3719](https://github.com/krizaka/kridoc/issues/3719)) ([#55](https://github.com/krizaka/kridoc/issues/55)) ([6e23cc0](https://github.com/krizaka/kridoc/commit/6e23cc0216d0be62df4984284edba722f2dc1716))
+
 ## [0.5.0](https://github.com/krizaka/kridoc/compare/v0.4.0...v0.5.0) (2026-11-15)
 
 
