@@ -2,7 +2,6 @@ import { readUpload } from "@krizaka/storage";
 
 import { documentRoute } from "@/app/documents-edge";
 import { jsonOf } from "@/lib/auth/http";
-import { SETTINGS } from "@/lib/env";
 import { documentView } from "@/lib/storage/document-service";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +16,9 @@ export async function GET(request: Request) {
 
 /** Keeps one document (multipart: `file`, and an optional `title`). The session is checked before the body is read. */
 export async function POST(request: Request) {
-  return documentRoute(request, async ({ service, ownerOf }) => {
+  return documentRoute(request, async ({ service, ownerOf, rules }) => {
     const owner = await ownerOf(request);
-    const upload = await readUpload(request, { field: "file", maxBytes: SETTINGS.documents.maxBytes });
+    const upload = await readUpload(request, { field: "file", maxBytes: (await rules()).maxBytes });
     const title = upload.form.get("title");
     const record = await service.upload(owner, {
       bytes: upload.bytes,

@@ -83,5 +83,51 @@
       "RATE_LIMITED": "Too many requests. Try again later.",
       "INTERNAL": "Something went wrong on our side. Try again later."
     }
+  },
+  "storageAdmin": {
+    "meta": {
+      "title": "Storage settings"
+    },
+    "title": "Storage settings",
+    "description": "The limits every upload and every link obeys. A change applies to the next one and is written in the audit.",
+    "maxMb": {
+      "label": "Largest file (MB)",
+      "hint": "Between {min} and {max} MB."
+    },
+    "signedUrlSeconds": {
+      "label": "Signed link lifetime (seconds)",
+      "hint": "Between {min} and {max} seconds."
+    },
+    "retentionDays": {
+      "label": "Retention (days)",
+      "hint": "Documents older than this are removed by the retention job. Between {min} and {max} days."
+    },
+    "types": {
+      "legend": "Accepted content types",
+      "hint": "At least one."
+    },
+    "save": "Save",
+    "saved": "Saved.",
+    "auditTitle": "Recent storage activity",
+    "auditEmpty": "Nothing yet.",
+    "actions": {
+      "storage.settings.changed": "Setting changed",
+      "storage.uploaded": "File uploaded",
+      "storage.read": "File read",
+      "storage.deleted": "File deleted",
+      "storage.swept": "Retention job run",
+      "storage.object.head": "File checked",
+      "storage.object.listed": "Files listed",
+      "storage.object.signed": "Link signed",
+      "storage.client.issued": "Product access issued",
+      "storage.client.revoked": "Product access revoked"
+    },
+    "errors": {
+      "ADMIN_OFF": "Not found.",
+      "UNAUTHENTICATED": "Sign in to continue.",
+      "FORBIDDEN": "Only an administrator may change the storage settings.",
+      "INVALID_SETTING": "A value is outside its limits. Nothing was changed.",
+      "INTERNAL": "Something went wrong on our side. Try again later."
+    }
   }
 }

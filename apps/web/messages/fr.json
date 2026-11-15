@@ -83,5 +83,51 @@
       "RATE_LIMITED": "Trop de requêtes. Réessayez plus tard.",
       "INTERNAL": "Une erreur est survenue de notre côté. Réessayez plus tard."
     }
+  },
+  "storageAdmin": {
+    "meta": {
+      "title": "Réglages du stockage"
+    },
+    "title": "Réglages du stockage",
+    "description": "Les limites que chaque envoi et chaque lien respectent. Un changement s'applique dès le suivant et est inscrit au journal d'audit.",
+    "maxMb": {
+      "label": "Fichier le plus gros (Mo)",
+      "hint": "Entre {min} et {max} Mo."
+    },
+    "signedUrlSeconds": {
+      "label": "Durée d'un lien signé (secondes)",
+      "hint": "Entre {min} et {max} secondes."
+    },
+    "retentionDays": {
+      "label": "Conservation (jours)",
+      "hint": "Les documents plus anciens sont supprimés par la tâche de conservation. Entre {min} et {max} jours."
+    },
+    "types": {
+      "legend": "Types de contenu acceptés",
+      "hint": "Au moins un."
+    },
+    "save": "Enregistrer",
+    "saved": "Enregistré.",
+    "auditTitle": "Activité récente du stockage",
+    "auditEmpty": "Rien pour l'instant.",
+    "actions": {
+      "storage.settings.changed": "Réglage modifié",
+      "storage.uploaded": "Fichier envoyé",
+      "storage.read": "Fichier lu",
+      "storage.deleted": "Fichier supprimé",
+      "storage.swept": "Tâche de conservation exécutée",
+      "storage.object.head": "Fichier vérifié",
+      "storage.object.listed": "Fichiers listés",
+      "storage.object.signed": "Lien signé",
+      "storage.client.issued": "Accès produit délivré",
+      "storage.client.revoked": "Accès produit révoqué"
+    },
+    "errors": {
+      "ADMIN_OFF": "Introuvable.",
+      "UNAUTHENTICATED": "Connectez-vous pour continuer.",
+      "FORBIDDEN": "Seul un administrateur peut modifier les réglages du stockage.",
+      "INVALID_SETTING": "Une valeur dépasse ses limites. Rien n'a été modifié.",
+      "INTERNAL": "Un problème est survenu de notre côté. Réessayez plus tard."
+    }
   }
 }

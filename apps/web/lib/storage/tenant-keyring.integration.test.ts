@@ -40,8 +40,13 @@ describe("the tenant keyring on PostgreSQL (krizaka-internal#3754)", () => {
       "SELECT table_name FROM information_schema.tables WHERE table_schema = 'storage' ORDER BY table_name",
     );
     expect(tables.rows.map((r) => r.table_name)).toEqual(["tenant_key", "tenant_keyring"]);
-    const marker = await pool.query("SELECT module, version FROM public.krizaka_module_versions");
-    expect(marker.rows).toEqual([{ module: "storage", version: 2 }]);
+    const marker = await pool.query("SELECT module, version FROM public.krizaka_module_versions ORDER BY module");
+    // The storage module is at v2; the settings and the audit trail (krizaka-internal#3755) are the other modules Kridoc composes.
+    expect(marker.rows).toEqual([
+      { module: "audit", version: 1 },
+      { module: "settings", version: 1 },
+      { module: "storage", version: 2 },
+    ]);
   });
 
   // The contract asks for an empty store each time: the real tables, emptied (the tests of one file run one after the other).

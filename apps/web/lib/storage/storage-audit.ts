@@ -4,19 +4,24 @@ import { createHash } from "node:crypto";
 export const STORAGE_AUDIT = {
   issued: "storage.client.issued",
   revoked: "storage.client.revoked",
-  put: "storage.object.put",
-  read: "storage.object.read",
+  uploaded: "storage.uploaded",
+  read: "storage.read",
   head: "storage.object.head",
   listed: "storage.object.listed",
-  deleted: "storage.object.deleted",
+  deleted: "storage.deleted",
   signed: "storage.object.signed",
-  linkRead: "storage.object.link-read",
+  settingsChanged: "storage.settings.changed",
+  swept: "storage.swept",
 } as const;
 export type StorageAuditAction = (typeof STORAGE_AUDIT)[keyof typeof STORAGE_AUDIT];
 
+/** Who acted: a product's client (by its id), one of Kridoc's accounts, or a job (the sweep). Never a token, never an address. */
+export const AUDIT_ACTOR = { client: "client", account: "account", job: "job" } as const;
+export type AuditActorKind = (typeof AUDIT_ACTOR)[keyof typeof AUDIT_ACTOR];
+
 export interface StorageAuditLine {
   action: StorageAuditAction;
-  clientId: string;
+  actor: { kind: AuditActorKind; id: string };
   tenantId: string;
   /** The SHA-256 of the key, 16 hex characters: the same object is followed across lines, its name is never written. */
   keyHash?: string;

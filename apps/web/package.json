@@ -10,11 +10,14 @@
     "typecheck": "tsc --noEmit",
     "check:code-names": "krizaka-code-names messages",
     "test": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "auth:create-admin": "esbuild scripts/create-admin.mts --bundle --platform=node --format=esm '--external:@krizaka/*' --external:pg --external:zod --log-level=warning --outfile=node_modules/.cache/create-admin.mjs && node node_modules/.cache/create-admin.mjs",
     "storage:client": "esbuild scripts/storage-client.mts --bundle --platform=node --format=esm '--external:@krizaka/*' --external:pg --external:zod --log-level=warning --outfile=node_modules/.cache/storage-client.mjs && node node_modules/.cache/storage-client.mjs",
+    "storage:sweep": "esbuild scripts/storage-sweep.mts --bundle --platform=node --format=esm '--external:@krizaka/*' --external:pg --external:zod --log-level=warning --outfile=node_modules/.cache/storage-sweep.mjs && node node_modules/.cache/storage-sweep.mjs",
     "db:rebuild": "esbuild scripts/db-rebuild.mts --bundle --platform=node --format=esm '--external:@krizaka/*' --external:pg --external:zod --log-level=warning --outfile=node_modules/.cache/db-rebuild.mjs && node node_modules/.cache/db-rebuild.mjs"
   },
   "dependencies": {
+    "@krizaka/audit": "^0.1.8",
     "@krizaka/auth": "^0.14.0",
     "@krizaka/db": "0.3.1",
     "@krizaka/fonts": "0.5.4",
@@ -23,6 +26,7 @@
     "@krizaka/org": "^1.5.0",
     "@krizaka/query": "^0.3.0",
     "@krizaka/rate-limit": "^0.3.1",
+    "@krizaka/settings": "^0.7.1",
     "@krizaka/storage": "^0.11.5",
     "@krizaka/tailwind": "^4.7.0",
     "@krizaka/time": "^0.2.0",
@@ -36,6 +40,7 @@
   },
   "devDependencies": {
     "@krizaka/config": "^0.25.0",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",

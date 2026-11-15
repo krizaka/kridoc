@@ -14,23 +14,17 @@ export const SETTINGS = {
   signIn: { perIp: 30, perSubject: 10, windowSeconds: 900 },
   /** Sign-up tries an address may make in one window (when sign-up is open). */
   signUp: { perIp: 10, windowSeconds: 3600 },
-  /** Kridoc's own documents: the largest file and the types its bytes may be (checked by magic number, never by name). */
-  documents: {
-    maxBytes: 25 * 1024 * 1024,
-    types: ["application/pdf", "image/png", "image/jpeg", "image/webp"],
-  },
   /**
-   * The storage API of the other products (`/api/storage/v1`, krizaka-internal#3756): the largest object, the types a client may
-   * declare (`application/octet-stream` for a product's own ciphertext), the longest a signed link lives, the most objects one list
-   * answers, and the requests one client may make in a window. Per tenant in the admin's settings later (slice 4).
+   * The storage API of the other products (`/api/storage/v1`, krizaka-internal#3756): the most objects one list answers, and the
+   * requests one client may make in a window. The size, the types, the link's life and the retention are the administrator's settings
+   * (lib/storage/storage-settings.ts, krizaka-internal#3755), never constants here.
    */
   storageApi: {
-    maxBytes: 25 * 1024 * 1024,
-    types: ["application/octet-stream", "application/pdf", "image/png", "image/jpeg", "image/webp", "text/plain"],
-    signedUrlSeconds: 300,
     listMax: 1000,
     rateLimit: { perSubject: 600, windowSeconds: 60 },
   },
+  /** The bounds of one retention sweep run: what it may touch at most (the rest is for the next run). */
+  retentionSweep: { expired: 200, owners: 50, objectsPerOwner: 1000 },
 } as const;
 
 /** An installation's tenant id: the prefix of every key (letters, digits, - or _; `assertTenantId` of @krizaka/storage). */
