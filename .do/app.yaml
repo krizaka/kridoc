@@ -61,5 +61,16 @@ services:
       - key: APP_SEARCH_INDEXING
         scope: RUN_AND_BUILD_TIME
         value: "on"
-      # No database and no accounts yet: DATABASE_URL, DATABASE_CA_CERT and AUTH_SESSION_SECRET (DO SECRETs) are declared here by the slice
-      # that brings their feature (krizaka-internal#3717, #3718), together with their requirement in apps/web/lib/env.ts.
+      # Kridoc's own database (krizaka-internal#3717): off until the dev database exists, so a missing key never takes the site down.
+      # With DATABASE_ENABLED on, the boot requires DATABASE_URL and DATABASE_CA_CERT (apps/web/lib/env.ts). Values by the founder, in the secret store.
+      - key: DATABASE_ENABLED
+        scope: RUN_TIME
+        value: "off"
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: DATABASE_CA_CERT
+        scope: RUN_TIME
+        type: SECRET
+      # No accounts yet: AUTH_SESSION_SECRET (a DO SECRET) is declared here by the slice that brings it (krizaka-internal#3718),
+      # together with its requirement in apps/web/lib/env.ts.

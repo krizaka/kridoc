@@ -15,6 +15,8 @@ export const envSchema = z.object({
   APP_DEV_HOST: z.string().optional(),
   /** `off` on every dev / preview deployment: noindex everywhere. */
   APP_SEARCH_INDEXING: z.enum(["on", "off"]).default("on"),
+  /** The database feature: `off` until the dev database exists, so a missing key never takes the public site down. */
+  DATABASE_ENABLED: z.enum(["on", "off"]).default("off"),
   /** Kridoc's own database (each product keeps its own users): a connection string, a secret. */
   DATABASE_URL: z.string().optional(),
   /** The CA certificate of a TLS database (PEM), a secret. */
@@ -35,14 +37,32 @@ export const readEnv = (source: Source = process.env): Env => envSchema.parse(wi
 /** One thing a production server cannot run without: the check returns a problem sentence (naming the key, never its value) or null. */
 export type Requirement = { key: string; check: (env: Env) => string | null };
 
+/** A connection string that asks for TLS (`sslmode=require`, `verify-ca`, `verify-full`): then the cluster's CA certificate is needed. */
+export const asksForTls = (url: string): boolean => /[?&]sslmode=(require|verify-ca|verify-full)(&|$)/.test(url);
+
 /**
- * The settings production cannot start without, as data per feature. EMPTY today: Kridoc has no database and no accounts yet,
- * so nothing is required and the server starts with the four settings it has. Each slice adds its own requirement together
- * with its feature, never before: slice B (krizaka-internal#3717) adds DATABASE_URL and DATABASE_CA_CERT (required when the URL
- * asks for TLS), slice C (krizaka-internal#3718) adds AUTH_SESSION_SECRET (at least SETTINGS.sessionSecretMinLength characters).
- * A key required here must also be exported by scripts/ci-after-build.sh and declared in .do/app.yaml (tests/ci-boot-env.test.ts).
+ * The settings production cannot start without, as data per feature. The database feature (slice B, krizaka-internal#3717) asks
+ * for DATABASE_URL and, when the URL asks for TLS, DATABASE_CA_CERT — only when DATABASE_ENABLED is `on`, so kridoc.com
+ * never goes down for a key a feature does not use yet. Slice C (krizaka-internal#3718) adds AUTH_SESSION_SECRET (at least
+ * SETTINGS.sessionSecretMinLength characters). A key required here must also be exported by scripts/ci-after-build.sh and
+ * declared in .do/app.yaml (tests/ci-boot-env.test.ts).
  */
-export const PRODUCTION_REQUIREMENTS: readonly Requirement[] = [];
+export const PRODUCTION_REQUIREMENTS: readonly Requirement[] = [
+  {
+    key: "DATABASE_URL",
+    check: (env) =>
+      env.DATABASE_ENABLED === "on" && !env.DATABASE_URL
+        ? "DATABASE_URL is not set (the database feature is on)"
+        : null,
+  },
+  {
+    key: "DATABASE_CA_CERT",
+    check: (env) =>
+      env.DATABASE_ENABLED === "on" && env.DATABASE_URL && asksForTls(env.DATABASE_URL) && !env.DATABASE_CA_CERT
+        ? "DATABASE_CA_CERT is not set (the database URL asks for TLS)"
+        : null,
+  },
+];
 
 /** What a production server cannot run without — named, never shown. Nothing is asked outside production. */
 export function productionProblems(env: Env, requirements: readonly Requirement[] = PRODUCTION_REQUIREMENTS): string[] {
