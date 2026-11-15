@@ -2,10 +2,11 @@
 
 Design only, no service code (K1 is built after the first paid pilot). Decided in ORG-039 (revision 4 of the storage subject).
 
-| File                                                       | What it is                                                                                  |
-| :--------------------------------------------------------- | :------------------------------------------------------------------------------------------ |
-| [`kridoc-api.v0.openapi.yaml`](kridoc-api.v0.openapi.yaml) | the contract, OpenAPI 3.1: tenant (from the key) and space (in the path) on every operation |
-| [`kridoc.c4`](kridoc.c4)                                   | the C4 model (LikeC4): context and containers, tenants and spaces as elements               |
+| File                                                                       | What it is                                                                                                                                                             |
+| :------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`kridoc-api.v0.openapi.yaml`](kridoc-api.v0.openapi.yaml)                 | the contract, OpenAPI 3.1: tenant (from the key) and space (in the path) on every operation                                                                            |
+| [`kridoc.c4`](kridoc.c4)                                                   | the C4 model (LikeC4): context and containers, tenants and spaces as elements                                                                                          |
+| [`kridoc-storage-api.v1.openapi.yaml`](kridoc-storage-api.v1.openapi.yaml) | **built**: the products' storage API (`/api/storage/v1`, krizaka-internal#3756), checked against the routes by `apps/web/app/api/storage/storage-api-contract.test.ts` |
 
 ## How it is checked
 

@@ -1,0 +1,212 @@
+openapi: 3.1.0
+info:
+  title: Kridoc storage API for Krizaka's products
+  version: 1.0.0
+  summary: Objects of one product's tenant behind a bearer token, sealed under that tenant's key, data in Canada (krizaka-internal#3756).
+  description: |
+    The contract of `/api/storage/v1` (slice 5 of krizaka-internal#3719; design in `docs/design/storage-service.md`). **Built**: the
+    routes are `apps/web/app/api/storage/v1/**`, behind `MEDIA_STORAGE_ENABLED` (off by default: every route answers 404
+    `STORAGE_API_OFF`).
+
+    **Tenancy.** A client is one product in one environment (`verikora-prod`). Its tenant is its token's, never a field of the request:
+    a key is `a/b/name.ext` (`assertKey` of `@krizaka/storage`), joined under the tenant's prefix, so another tenant's objects cannot
+    even be named; another tenant's object is « not found ».
+
+    **Tokens.** `kst1.<43 base64url>` (256 random bits), issued by an administrator (`pnpm storage:client issue`), shown once; Kridoc
+    keeps only its keyed hash. Scopes: `put`, `get` (get, head, list), `delete`, `sign`. Rotation: issue a second, revoke the first.
+
+    **Encryption.** Every object is sealed under its tenant's own key (`tenantStore` / `tenantVault`): the bucket holds ciphertext only.
+
+    **Behaviour.** The behavioural contract is `objectStoreContract` of `@krizaka/storage/testkit`: Kridoc runs it against these
+    routes through its reference client (`apps/web/lib/storage/kridoc-api-store.ts`), and Verikora's `kridoc` provider runs the same.
+
+    **Server to server only.** No CORS. A browser gets at most one signed link to one object, valid a few minutes.
+
+    **Refusals** are Problem Details (RFC 9457) with a stable `code`: `STORAGE_API_OFF` 404, `STORAGE_UNAUTHENTICATED` 401,
+    `STORAGE_SCOPE_REFUSED` 403, `STORAGE_OBJECT_NOT_FOUND` 404, `STORAGE_KEY_REFUSED` 400, `STORAGE_OBJECT_TOO_BIG` 413,
+    `STORAGE_TYPE_REFUSED` 415, `STORAGE_LINK_REFUSED` 403, `STORAGE_INVALID_INPUT` 400, `RATE_LIMITED` 429 (with `Retry-After`),
+    `INTERNAL` 500.
+servers:
+  - url: https://www.kridoc.com
+security:
+  - storageToken: []
+paths:
+  /api/storage/v1/objects/{key}:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    put:
+      operationId: putObject
+      summary: Keeps an object (the raw body); an existing key is replaced.
+      description: |
+        The declared `Content-Type` must be one the settings accept (`SETTINGS.storageApi.types`); bytes of a known type (magic number)
+        must be that type, and may not hide under `application/octet-stream` (the type of a product's own ciphertext). At most
+        `SETTINGS.storageApi.maxBytes`, never empty.
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "201":
+          description: Kept.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [object]
+                properties:
+                  object: { $ref: "#/components/schemas/StoredObject" }
+        "400": { $ref: "#/components/responses/Refusal" }
+        "401": { $ref: "#/components/responses/Refusal" }
+        "403": { $ref: "#/components/responses/Refusal" }
+        "413": { $ref: "#/components/responses/Refusal" }
+        "415": { $ref: "#/components/responses/Refusal" }
+        "429": { $ref: "#/components/responses/Refusal" }
+    get:
+      operationId: getObject
+      summary: The object's bytes, as an attachment (its stored type, `nosniff`, never cached).
+      responses:
+        "200":
+          description: The bytes.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Refusal" }
+        "403": { $ref: "#/components/responses/Refusal" }
+        "404": { $ref: "#/components/responses/Refusal" }
+    head:
+      operationId: headObject
+      summary: The object's size (`Content-Length`), without its bytes.
+      responses:
+        "200": { description: It exists. }
+        "404": { description: No such object. }
+    delete:
+      operationId: deleteObject
+      summary: Deletes the object; deleting a missing one is not an error.
+      responses:
+        "204": { description: Gone. }
+        "401": { $ref: "#/components/responses/Refusal" }
+        "403": { $ref: "#/components/responses/Refusal" }
+  /api/storage/v1/objects:
+    get:
+      operationId: listObjects
+      summary: The tenant's objects whose key starts with `prefix`, in key order, at most `SETTINGS.storageApi.listMax`.
+      parameters:
+        - name: prefix
+          in: query
+          required: false
+          schema: { type: string, default: "" }
+      responses:
+        "200":
+          description: The objects.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [objects, truncated]
+                properties:
+                  objects:
+                    type: array
+                    items: { $ref: "#/components/schemas/ObjectInfo" }
+                  truncated: { type: boolean }
+        "400": { $ref: "#/components/responses/Refusal" }
+        "401": { $ref: "#/components/responses/Refusal" }
+  /api/storage/v1/links/{key}:
+    parameters:
+      - $ref: "#/components/parameters/Key"
+    post:
+      operationId: signObjectLink
+      summary: A signed link to one object, for a browser or a worker without the token (scope `sign`).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                ttlSeconds:
+                  { type: integer, minimum: 1, description: "Capped by SETTINGS.storageApi.signedUrlSeconds (300 s)." }
+      responses:
+        "201":
+          description: The link.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, expiresAt]
+                properties:
+                  url: { type: string, format: uri }
+                  expiresAt: { type: string, format: date-time }
+        "400": { $ref: "#/components/responses/Refusal" }
+        "403": { $ref: "#/components/responses/Refusal" }
+    get:
+      operationId: readObjectLink
+      summary: The object a signed link names, while it lives and its client is not revoked. No token.
+      security: []
+      parameters:
+        - { name: client, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: expires, in: query, required: true, schema: { type: string, pattern: "^[0-9]{1,12}$" } }
+        - { name: signature, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: The bytes.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Refusal" }
+        "404": { $ref: "#/components/responses/Refusal" }
+components:
+  securitySchemes:
+    storageToken:
+      type: http
+      scheme: bearer
+      bearerFormat: kst1
+  parameters:
+    Key:
+      name: key
+      in: path
+      required: true
+      description: "`a/b/name.ext`, each segment percent-encoded: no empty segment, no `.` or `..`, no backslash, at most 512 characters."
+      schema: { type: string }
+  schemas:
+    ObjectInfo:
+      type: object
+      required: [key, size]
+      properties:
+        key: { type: string }
+        size: { type: integer }
+    StoredObject:
+      type: object
+      required: [key, size, contentType]
+      properties:
+        key: { type: string }
+        size: { type: integer }
+        contentType: { type: string }
+  responses:
+    Refusal:
+      description: A refusal (Problem Details).
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            required: [type, title, status, code, detail]
+            properties:
+              type: { type: string }
+              title: { type: string }
+              status: { type: integer }
+              code:
+                type: string
+                enum:
+                  - STORAGE_API_OFF
+                  - STORAGE_UNAUTHENTICATED
+                  - STORAGE_SCOPE_REFUSED
+                  - STORAGE_OBJECT_NOT_FOUND
+                  - STORAGE_KEY_REFUSED
+                  - STORAGE_OBJECT_TOO_BIG
+                  - STORAGE_TYPE_REFUSED
+                  - STORAGE_LINK_REFUSED
+                  - STORAGE_INVALID_INPUT
+                  - RATE_LIMITED
+                  - INTERNAL
+              detail: { type: string }

@@ -6,6 +6,7 @@ import {
   parseVaultKey,
   type TenantKeyStore,
   tenantStore,
+  type TenantVault,
   tenantVault,
 } from "@krizaka/storage";
 
@@ -25,15 +26,23 @@ export interface DocumentVaultDeps {
 }
 
 /**
+ * The installation's vault: one keyring for its tenants, Kridoc's accounts (`account-<uuid>`) and the other products (`verikora-prod`).
+ * @throws StorageError `STORAGE_BAD_SECRET_KEY` for a root key that is not 32 bytes (the message never carries it)
+ */
+export function installationVaultOf(deps: DocumentVaultDeps): TenantVault {
+  // The root key held by this process, from the secret store (a cloud KMS is the same `KeyService` port: krizaka-internal#3754).
+  const kms = memoryKeyService({ name: "media-vault-key", root: parseVaultKey(deps.rootKey) });
+  return tenantVault({ kms, keys: deps.keys, clock: deps.clock, audit: deps.audit });
+}
+
+/**
  * Envelope encryption per account, all from @krizaka/storage: the root key wraps each account's key (one per account, kept wrapped in
  * the keyring), which wraps a fresh data key per object (AES-256-GCM, the object's full name as associated data). The bucket only ever
  * holds ciphertext; a copy under another account's name does not open; shredding an account's key makes all of it unreadable.
  * @throws StorageError `STORAGE_BAD_SECRET_KEY` for a root key that is not 32 bytes (the message never carries it)
  */
 export function ownerObjectsOf(installation: ObjectStore, deps: DocumentVaultDeps): OwnerObjects {
-  // The root key held by this process, from the secret store (a cloud KMS is the same `KeyService` port: krizaka-internal#3754).
-  const kms = memoryKeyService({ name: "media-vault-key", root: parseVaultKey(deps.rootKey) });
-  const vault = tenantVault({ kms, keys: deps.keys, clock: deps.clock, audit: deps.audit });
+  const vault = installationVaultOf(deps);
   return {
     of: (ownerId) => tenantStore(installation, vault, accountTenantOf(ownerId)),
     shred: (ownerId) => vault.shredTenant(accountTenantOf(ownerId)),

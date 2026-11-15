@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { readEnv } from "@/lib/env";
 import { STORAGE_PROVIDER } from "@/lib/storage/providers";
 
-import { DEV_TENANT, storageConfigOf } from "./documents-edge";
+import { DEV_TENANT, storageConfigOf } from "./storage-edge";
 
 const TORONTO = {
   endpoint: "https://tor1.digitaloceanspaces.com",
