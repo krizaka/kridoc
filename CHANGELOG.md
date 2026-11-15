@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/krizaka/kridoc/compare/v0.3.0...v0.4.0) (2026-11-15)
+
+
+### Features
+
+* **db:** Kridoc's own database with @krizaka/db (krizaka-internal[#3717](https://github.com/krizaka/kridoc/issues/3717)) ([#50](https://github.com/krizaka/kridoc/issues/50)) ([df65f47](https://github.com/krizaka/kridoc/commit/df65f47eb8e490be2992562b5b39365de5efecfa))
+
 ## [0.3.0](https://github.com/krizaka/kridoc/compare/v0.2.6...v0.3.0) (2026-11-15)
 
 
