@@ -32,6 +32,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@krizaka/audit':
+        specifier: ^0.1.8
+        version: 0.1.8(vitest@5.0.5)(zod@4.6.7)
       '@krizaka/auth':
         specifier: ^0.14.0
         version: 0.14.0(vitest@5.0.5)(zod@4.6.7)
@@ -52,10 +55,13 @@ importers:
         version: 1.5.0
       '@krizaka/query':
         specifier: ^0.3.0
-        version: 0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1)
+        version: 0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1)
       '@krizaka/rate-limit':
         specifier: ^0.3.1
         version: 0.3.1(vitest@5.0.5)(zod@4.6.7)
+      '@krizaka/settings':
+        specifier: ^0.7.1
+        version: 0.7.1(zod@4.6.7)
       '@krizaka/storage':
         specifier: ^0.11.5
         version: 0.11.5(vitest@5.0.5)(zod@4.6.7)
@@ -70,10 +76,10 @@ importers:
         version: 4.7.0
       '@krizaka/ui':
         specifier: ^4.7.0
-        version: 4.7.0(@krizaka/query@0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1))(@krizaka/tailwind@4.7.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@4.3.3)(vitest@5.0.5)
+        version: 4.7.0(@krizaka/query@0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1))(@krizaka/tailwind@4.7.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@4.3.3)(vitest@5.0.5)
       next:
         specifier: ^16.4.3
-        version: 16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       pg:
         specifier: ^8.23.1
         version: 8.23.1
@@ -90,6 +96,9 @@ importers:
       '@krizaka/config':
         specifier: ^0.25.0
         version: 0.25.0(eslint-config-next@16.4.3(@typescript-eslint/parser@8.72.0(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(typescript@5.9.3))(eslint@10.13.0(jiti@2.7.0))(prettier@3.9.10)(typescript@5.9.3)
+      '@playwright/test':
+        specifier: ^1.65.1
+        version: 1.65.1
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
@@ -718,6 +727,16 @@ packages:
     peerDependencies:
       solid-js: ^1.8.8
 
+  '@krizaka/audit@0.1.8':
+    resolution: {integrity: sha512-T4Hi8Iynv4Z0wOdLEaVddj+WFBmMIvlJiuWeYAg0MDIlWkbLmjWDWOWvq1pnNIZyel1Tm/5dNVlBaZEFSWNfnA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      vitest: '>=4'
+      zod: '>=3.23'
+    peerDependenciesMeta:
+      vitest:
+        optional: true
+
   '@krizaka/auth@0.14.0':
     resolution: {integrity: sha512-Nb8Gi8YPVIiI83qHD4UiF7KGJmRA8sepEh3+6Axv3/Fo+KN5QCSPxPQ/llqLK60MbhLUwV/PWGw0vfiwHpEBkw==}
     engines: {node: '>=22'}
@@ -789,6 +808,11 @@ packages:
     engines: {node: '>=22'}
     hasBin: true
 
+  '@krizaka/org@1.7.1':
+    resolution: {integrity: sha512-q/K/BA6gYfMXX2tYbv47WMi/KucMNqbv1d3vaHMEL3YkW8Sf6LtTMn728C6MFe9w6GoNwMCX9LaYrtMI4hD4GA==}
+    engines: {node: '>=22'}
+    hasBin: true
+
   '@krizaka/organize@0.4.0':
     resolution: {integrity: sha512-6b9tjOfsCsiawp4mMSNKK3N2UvOdg90PRyYUXJuD2bZccGSsnYWzvaSuJHSiK+4mKR81iu6ioEf4YWtR1Hg1pg==}
     engines: {node: '>=22'}
@@ -841,8 +865,8 @@ packages:
       pg:
         optional: true
 
-  '@krizaka/settings@0.7.0':
-    resolution: {integrity: sha512-EfSbxAc644d9O568GdenElKHfVCACUIoXjurVfSTi92liEiPeP7pwxRGvDPGbnYIjCqaiijY8mBZBQCAQ11sNA==}
+  '@krizaka/settings@0.7.1':
+    resolution: {integrity: sha512-gtjTzInohdwmjgnbeE6UPCoiYuwS6l2hYgBjKFXFHA+tQPOZBDkn+TSrydbGUSG1iipVJOt0M4gxF1fKuxVTJA==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: '>=3.23'
@@ -1036,6 +1060,11 @@ packages:
 
   '@oxc-project/types@0.156.0':
     resolution: {integrity: sha512-1Duyg48TdJNdyhEB8Xn1L36bT9Pv6GUtlKjHxOys8xkaF/rQq3XJE+bAurSK/AgIz5mGFsb77cn9Pb20+WCScw==}
+
+  '@playwright/test@1.65.1':
+    resolution: {integrity: sha512-y+NCIRm2LvY4slUVWvGh1nujJ8RF/hEisIsq2mtUPgdQC4L701bq5hZGMhrpeXjACvwvO9tj5dJqhvM6TP9lbw==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@protomaps/basemaps@5.7.2':
     resolution: {integrity: sha512-K1Yk6bWdULulYg+R2QRVXx4NzJZan5YQhpejEG0c1/sXruJrfPIPZuakpf3jwAgVmjIRVQwAv+yRafDeN0aaUQ==}
@@ -3605,6 +3634,16 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
+  playwright-core@1.65.1:
+    resolution: {integrity: sha512-hqPpz7blSMPxWVdoeE1yiBSzXsKiVOd2k+kjCvmUywD2GPO2Dd9HfcWnq9NN0GHbNZDFgZ9JfBFr+X5/BLo0qw==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.65.1:
+    resolution: {integrity: sha512-vJ1FuoOrNwOKHUIVEvSt3jT1L+wjjDpwhwIstKtfvTh8XIG4FG4bIFuvNdMxi81LGfAhUgUZleVFaOLY4RIUUw==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   pmtiles@4.5.0:
     resolution: {integrity: sha512-CBeD4SoUluFziGdy/8k7FOjQxQy486n+929W/tWophauvMICpkZ26vGBWhDt/6b1FZQWNaf4jFdT/5+q0Wii5w==}
 
@@ -4737,10 +4776,19 @@ snapshots:
       '@solid-primitives/utils': 6.4.1(solid-js@1.9.19)
       solid-js: 1.9.19
 
+  '@krizaka/audit@0.1.8(vitest@5.0.5)(zod@4.6.7)':
+    dependencies:
+      '@krizaka/db': 0.3.1
+      '@krizaka/settings': 0.7.1(zod@4.6.7)
+      date-fns: 4.4.0
+      zod: 4.6.7
+    optionalDependencies:
+      vitest: 5.0.5(@types/node@24.19.2)(@vitest/coverage-v8@5.0.5)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
   '@krizaka/auth@0.14.0(vitest@5.0.5)(zod@4.6.7)':
     dependencies:
       '@krizaka/db': 0.3.1
-      '@krizaka/settings': 0.7.0(zod@4.6.7)
+      '@krizaka/settings': 0.7.1(zod@4.6.7)
       '@krizaka/time': 0.2.0
       date-fns: 4.4.0
     optionalDependencies:
@@ -4804,6 +4852,8 @@ snapshots:
 
   '@krizaka/org@1.5.0': {}
 
+  '@krizaka/org@1.7.1': {}
+
   '@krizaka/organize@0.4.0(vitest@5.0.5)':
     optionalDependencies:
       vitest: 5.0.5(@types/node@24.19.2)(@vitest/coverage-v8@5.0.5)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
@@ -4814,17 +4864,17 @@ snapshots:
     optionalDependencies:
       react: 19.3.1
 
-  '@krizaka/query@0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1)':
+  '@krizaka/query@0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1)':
     dependencies:
       '@krizaka/realtime': 0.2.1(pg@8.23.1)
       '@tanstack/query-async-storage-persister': 5.104.5
       '@tanstack/react-query': 5.104.5(@types/react@19.3.0)(react@19.3.1)
       '@tanstack/react-query-devtools': 5.104.5(@tanstack/react-query@5.104.5(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(csstype@3.2.3)(react@19.3.1)
       '@tanstack/react-query-persist-client': 5.104.5(@tanstack/react-query@5.104.5(@types/react@19.3.0)(react@19.3.1))(@types/react@19.3.0)(react@19.3.1)
-      nuqs: 2.10.2(next@16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)
+      nuqs: 2.10.2(next@16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)
       react: 19.3.1
     optionalDependencies:
-      next: 16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      next: 16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
     transitivePeerDependencies:
       - '@remix-run/react'
       - '@tanstack/react-router'
@@ -4838,7 +4888,7 @@ snapshots:
   '@krizaka/rate-limit@0.3.1(vitest@5.0.5)(zod@4.6.7)':
     dependencies:
       '@krizaka/db': 0.3.1
-      '@krizaka/settings': 0.7.0(zod@4.6.7)
+      '@krizaka/settings': 0.7.1(zod@4.6.7)
       '@krizaka/time': 0.2.0
     optionalDependencies:
       vitest: 5.0.5(@types/node@24.19.2)(@vitest/coverage-v8@5.0.5)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
@@ -4848,16 +4898,16 @@ snapshots:
     optionalDependencies:
       pg: 8.23.1
 
-  '@krizaka/settings@0.7.0(zod@4.6.7)':
+  '@krizaka/settings@0.7.1(zod@4.6.7)':
     dependencies:
       '@krizaka/db': 0.3.1
-      '@krizaka/org': 1.5.0
+      '@krizaka/org': 1.7.1
       zod: 4.6.7
 
   '@krizaka/storage@0.11.5(vitest@5.0.5)(zod@4.6.7)':
     dependencies:
       '@krizaka/db': 0.3.1
-      '@krizaka/settings': 0.7.0(zod@4.6.7)
+      '@krizaka/settings': 0.7.1(zod@4.6.7)
       arctic: 3.7.0
     optionalDependencies:
       vitest: 5.0.5(@types/node@24.19.2)(@vitest/coverage-v8@5.0.5)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
@@ -4866,7 +4916,7 @@ snapshots:
   '@krizaka/tailwind@4.7.0(@krizaka/tokens@4.7.0)(@krizaka/ui@4.7.0)(tailwindcss@4.3.3)':
     dependencies:
       '@krizaka/tokens': 4.7.0
-      '@krizaka/ui': 4.7.0(@krizaka/query@0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1))(@krizaka/tailwind@4.7.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@4.3.3)(vitest@5.0.5)
+      '@krizaka/ui': 4.7.0(@krizaka/query@0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1))(@krizaka/tailwind@4.7.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@4.3.3)(vitest@5.0.5)
       tailwindcss: 4.3.3
 
   '@krizaka/time@0.2.0':
@@ -4875,7 +4925,7 @@ snapshots:
 
   '@krizaka/tokens@4.7.0': {}
 
-  '@krizaka/ui@4.7.0(@krizaka/query@0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1))(@krizaka/tailwind@4.7.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@4.3.3)(vitest@5.0.5)':
+  '@krizaka/ui@4.7.0(@krizaka/query@0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1))(@krizaka/tailwind@4.7.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@4.3.3)(vitest@5.0.5)':
     dependencies:
       '@krizaka/icons': 0.10.0(react@19.3.1)
       '@krizaka/intl': 0.4.1
@@ -4898,7 +4948,7 @@ snapshots:
       tailwind-variants: 3.3.1(tailwindcss@4.3.3)
       zod: 4.6.7
     optionalDependencies:
-      '@krizaka/query': 0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1)
+      '@krizaka/query': 0.3.0(@types/react@19.3.0)(csstype@3.2.3)(next@16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(react@19.3.1)
       '@krizaka/tailwind': 4.7.0(@krizaka/tokens@4.7.0)(@krizaka/ui@4.7.0)(tailwindcss@4.3.3)
       react-dom: 19.3.1(react@19.3.1)
       tailwindcss: 4.3.3
@@ -4984,6 +5034,10 @@ snapshots:
       '@oslojs/encoding': 0.4.1
 
   '@oxc-project/types@0.156.0': {}
+
+  '@playwright/test@1.65.1':
+    dependencies:
+      playwright: 1.65.1
 
   '@protomaps/basemaps@5.7.2': {}
 
@@ -7559,7 +7613,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next@16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+  next@16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
     dependencies:
       '@next/env': 16.4.3
       '@swc/helpers': 0.5.23
@@ -7578,6 +7632,7 @@ snapshots:
       '@next/swc-linux-x64-musl': 16.4.3
       '@next/swc-win32-arm64-msvc': 16.4.3
       '@next/swc-win32-x64-msvc': 16.4.3
+      '@playwright/test': 1.65.1
       sharp: 0.35.5(@types/node@24.19.2)
     transitivePeerDependencies:
       - '@babel/core'
@@ -7593,12 +7648,12 @@ snapshots:
 
   node-releases@2.0.60: {}
 
-  nuqs@2.10.2(next@16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1):
+  nuqs@2.10.2(next@16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1):
     dependencies:
       '@standard-schema/spec': 1.1.0
       react: 19.3.1
     optionalDependencies:
-      next: 16.4.3(@babel/core@7.29.7)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      next: 16.4.3(@babel/core@7.29.7)(@playwright/test@1.65.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   object-assign@4.1.1: {}
 
@@ -7714,6 +7769,12 @@ snapshots:
   picomatch@2.3.2: {}
 
   picomatch@4.0.7: {}
+
+  playwright-core@1.65.1: {}
+
+  playwright@1.65.1:
+    dependencies:
+      playwright-core: 1.65.1
 
   pmtiles@4.5.0:
     dependencies:

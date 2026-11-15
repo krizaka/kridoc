@@ -2,21 +2,20 @@ import { sniffType, STORAGE_CODE, StorageError } from "@krizaka/storage";
 import { z } from "zod";
 
 import type { DocumentRecord, DocumentStore, OwnerObjects } from "./document-port";
+import { accountTenantOf } from "./document-vault";
 import { DOCUMENT_ERROR, DocumentError } from "./errors";
-
-/** The rules every document obeys, passed in (SETTINGS.documents today, the admin's settings later). */
-export interface DocumentLimits {
-  maxBytes: number;
-  /** The types the BYTES may be (magic number), whatever the name or the declared type say. */
-  types: readonly string[];
-}
+import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
+import type { StorageRules, StorageRulesSource } from "./storage-settings";
 
 export interface DocumentServiceDeps {
   documents: DocumentStore;
   /** The bytes, one sealed store per owner (envelope encryption per account, lib/storage/document-vault.ts). */
   objects: OwnerObjects;
   newId: () => string;
-  limits: DocumentLimits;
+  /** The administrator's rules (size, and the types the BYTES may be by magic number), read on every upload: a change applies at once. */
+  rules: StorageRulesSource;
+  /** One line per upload, read and delete: the account, its tenant, the key's hash. */
+  audit: StorageAudit;
 }
 
 /** A file as the route read it: the bytes, the name it arrived with, the title the person gave (if any). */
@@ -58,10 +57,10 @@ const notFound = () => new DocumentError(DOCUMENT_ERROR.notFound);
 const isId = (id: string): boolean => z.uuid().safeParse(id).success;
 
 /** The type of a file's bytes when the rules accept them. */
-function acceptedType(bytes: Uint8Array, limits: DocumentLimits): string {
-  if (bytes.byteLength === 0 || bytes.byteLength > limits.maxBytes) throw new DocumentError(DOCUMENT_ERROR.tooBig);
+function acceptedType(bytes: Uint8Array, rules: StorageRules): string {
+  if (bytes.byteLength === 0 || bytes.byteLength > rules.maxBytes) throw new DocumentError(DOCUMENT_ERROR.tooBig);
   const type = sniffType(bytes);
-  if (type === null || !limits.types.includes(type)) throw new DocumentError(DOCUMENT_ERROR.badType);
+  if (type === null || !rules.types.includes(type)) throw new DocumentError(DOCUMENT_ERROR.badType);
   return type;
 }
 
@@ -95,6 +94,14 @@ async function bytesOf(objects: OwnerObjects, ownerId: string, id: string): Prom
  * Every read starts from the owner's metadata, so a person reaches only their own documents. Ports in, typed `DocumentError` out.
  */
 export function createDocumentService(deps: DocumentServiceDeps): DocumentService {
+  const note = (action: StorageAuditAction, ownerId: string, id: string, size?: number) =>
+    deps.audit({
+      action,
+      actor: { kind: AUDIT_ACTOR.account, id: ownerId },
+      tenantId: accountTenantOf(ownerId),
+      keyHash: keyHashOf(objectKeyOf(id)),
+      ...(size === undefined ? {} : { detail: { size } }),
+    });
   const ownRecord = async (ownerId: string, id: string): Promise<DocumentRecord> => {
     const record = isId(id) ? await deps.documents.findForOwner(ownerId, id) : null;
     if (!record) throw notFound();
@@ -102,13 +109,14 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
   };
   return {
     async upload(ownerId, file) {
-      const mediaType = acceptedType(file.bytes, deps.limits);
+      const mediaType = acceptedType(file.bytes, await deps.rules());
       const id = deps.newId();
       const key = objectKeyOf(id);
       const objects = deps.objects.of(ownerId);
       await objects.put(key, file.bytes, { contentType: mediaType });
+      let record: DocumentRecord;
       try {
-        return await deps.documents.add({
+        record = await deps.documents.add({
           id,
           ownerId,
           title: titleOf(file),
@@ -120,12 +128,15 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
         await objects.delete(key);
         throw error;
       }
+      await note(STORAGE_AUDIT.uploaded, ownerId, id, file.bytes.byteLength);
+      return record;
     },
     list: (ownerId) => deps.documents.listByOwner(ownerId),
     async read(ownerId, id) {
       const record = await ownRecord(ownerId, id);
       const bytes = await bytesOf(deps.objects, ownerId, id);
       if (!bytes) throw notFound();
+      await note(STORAGE_AUDIT.read, ownerId, id, bytes.byteLength);
       return { record, bytes };
     },
     async remove(ownerId, id) {
@@ -133,6 +144,7 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
       // The metadata first: once it is gone nobody reaches the bytes, and a failed delete of the bytes leaves an orphan the sweep finds.
       await deps.documents.removeForOwner(ownerId, id);
       await deps.objects.of(ownerId).delete(objectKeyOf(id));
+      await note(STORAGE_AUDIT.deleted, ownerId, id);
     },
     async eraseOwner(ownerId) {
       await deps.objects.shred(ownerId);

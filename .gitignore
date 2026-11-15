@@ -20,3 +20,7 @@ docs/screenshots/
 
 # The local documents store (MEDIA_STORAGE_PROVIDER=local)
 .data/
+
+# Playwright journeys
+test-results/
+playwright-report/

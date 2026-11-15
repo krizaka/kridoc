@@ -5,19 +5,23 @@ import { dbTenantKeyStore } from "@krizaka/storage";
 import { tokenOfRequest } from "@/lib/auth/session-cookie";
 import { databaseOf } from "@/lib/db/connection";
 import { createDocumentStore } from "@/lib/db/document-store";
-import { type Env, readEnv, SETTINGS } from "@/lib/env";
+import { type Env, readEnv } from "@/lib/env";
 import { createDocumentService, type DocumentService } from "@/lib/storage/document-service";
 import { ownerObjectsOf } from "@/lib/storage/document-vault";
 import { DOCUMENT_ERROR, DocumentError } from "@/lib/storage/errors";
 import { documentRefusal } from "@/lib/storage/http";
 import { objectStoreOf, platformFetch } from "@/lib/storage/object-store";
+import type { StorageRulesSource } from "@/lib/storage/storage-settings";
 
 import { accountsRuntime } from "./accounts-edge";
 import { logKeyEvent, storageConfigOf, vaultRootKeyOf } from "./storage-edge";
+import { storageRulesFor, storageTrailOf } from "./storage-rules-edge";
 import { systemClock } from "./system-clock";
 
 export interface DocumentsRuntime {
   service: DocumentService;
+  /** The administrator's rules, asked by the route for the size it reads (the service asks again for the types). */
+  rules: StorageRulesSource;
   /** The account of the request's session: the owner of every document it touches. */
   ownerOf(request: Request): Promise<string>;
 }
@@ -27,6 +31,7 @@ export function documentsRuntime(env: Env = readEnv()): DocumentsRuntime {
   if (env.MEDIA_STORAGE_ENABLED !== "on") throw new DocumentError(DOCUMENT_ERROR.documentsOff);
   const { sessions } = accountsRuntime(env);
   const { query } = databaseOf(env);
+  const rules = storageRulesFor(env);
   const service = createDocumentService({
     documents: createDocumentStore(query),
     objects: ownerObjectsOf(objectStoreOf(storageConfigOf(env), { fetch: platformFetch, clock: systemClock }), {
@@ -36,10 +41,12 @@ export function documentsRuntime(env: Env = readEnv()): DocumentsRuntime {
       audit: logKeyEvent,
     }),
     newId: randomUUID,
-    limits: SETTINGS.documents,
+    rules,
+    audit: storageTrailOf(env).audit,
   });
   return {
     service,
+    rules,
     async ownerOf(request) {
       const session = await sessions.resolve(tokenOfRequest(request.headers));
       if (!session) throw new DocumentError(DOCUMENT_ERROR.unauthenticated);

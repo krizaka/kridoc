@@ -1,3 +1,4 @@
+import { isLocalReturn } from "@krizaka/auth";
 import { KridocLogo } from "@krizaka/ui";
 import { AuthLayout } from "@krizaka/ui/auth-layout";
 import type { Metadata } from "next";
@@ -16,11 +17,17 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 }
 
 /** Sign-in on @krizaka/ui's auth layout. Not found while the accounts feature is off; says « Sign-up closed » while AUTH_SIGNUP is closed. */
-export default async function SignInPage({ params }: Readonly<{ params: Promise<{ locale: string }> }>) {
+export default async function SignInPage({
+  params,
+  searchParams,
+}: Readonly<{ params: Promise<{ locale: string }>; searchParams: Promise<{ next?: string }> }>) {
   const env = readEnv();
   if (env.AUTH_ENABLED !== "on") notFound();
   const locale = asLocale((await params).locale);
   const t = getDictionary(locale).auth.signIn;
+  const { next } = await searchParams;
+  // Back to where the visitor came from, only a path of this site (never another address).
+  const returnTo = next && isLocalReturn(next) ? next : `/${locale}`;
   return (
     <AuthLayout
       brand={
@@ -40,7 +47,7 @@ export default async function SignInPage({ params }: Readonly<{ params: Promise<
         )
       }
     >
-      <SignInForm labels={t} locale={locale} next={`/${locale}`} />
+      <SignInForm labels={t} locale={locale} next={returnTo} />
     </AuthLayout>
   );
 }

@@ -19,15 +19,18 @@ import { signedLinksOf } from "./signed-links";
 import { createStorageApi, STORAGE_API_ACTION, type StorageApi } from "./storage-api";
 import type { StorageAuditLine } from "./storage-audit";
 import { createStorageClients, type StorageClients } from "./storage-clients";
+import type { StorageRules } from "./storage-settings";
 
 const PDF = new TextEncoder().encode("%PDF-1.7\n1 0 obj << >> endobj\n%%EOF\n");
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
-const LIMITS = {
+const LIMITS = { listMax: 100 };
+const DEFAULT_RULES: StorageRules = {
   maxBytes: 64,
   types: ["application/pdf", "image/png", "application/octet-stream"],
   signedUrlSeconds: 300,
-  listMax: 100,
+  retentionDays: 365,
 };
+let rules: StorageRules = DEFAULT_RULES;
 
 describe("the storage API for products (krizaka-internal#3756)", () => {
   let now: Date;
@@ -63,10 +66,12 @@ describe("the storage API for products (krizaka-internal#3756)", () => {
       clock,
       audit: record,
       limits: LIMITS,
+      rules: async () => rules,
     });
   };
 
   beforeEach(() => {
+    rules = DEFAULT_RULES;
     now = new Date("2026-11-15T12:00:00Z");
     inner = memoryObjectStore();
     audit = [];
@@ -199,14 +204,42 @@ describe("the storage API for products (krizaka-internal#3756)", () => {
       await api.put(mine, "secret-name/lease.pdf", PDF, "application/pdf");
       await api.get(mine, "secret-name/lease.pdf");
       await api.remove(mine, "secret-name/lease.pdf");
-      const lines = audit.filter((l) => l.action.startsWith("storage.object."));
-      expect(lines.map((l) => l.action)).toEqual([
-        "storage.object.put",
-        "storage.object.read",
-        "storage.object.deleted",
-      ]);
-      expect(lines.every((l) => l.clientId === client.id && l.tenantId === "verikora-prod")).toBe(true);
+      const lines = audit.filter((l) => /^storage\.(uploaded|read|deleted)$/.test(l.action));
+      expect(lines.map((l) => l.action)).toEqual(["storage.uploaded", "storage.read", "storage.deleted"]);
+      expect(
+        lines.every((l) => l.actor.id === client.id && l.actor.kind === "client" && l.tenantId === "verikora-prod"),
+      ).toBe(true);
       expect(JSON.stringify(audit)).not.toContain("secret-name");
+    });
+  });
+
+  describe("the administrator's rules", () => {
+    it("apply to the next upload and the next link, without a restart", async () => {
+      const mine = await api.authenticate((await issue()).token);
+      await api.put(mine, "a/one.pdf", PDF, "application/pdf");
+
+      rules = { ...rules, maxBytes: PDF.byteLength - 1 };
+      await expect(api.put(mine, "a/two.pdf", PDF, "application/pdf")).rejects.toMatchObject({
+        code: STORAGE_API_ERROR.tooBig,
+      });
+
+      rules = { ...rules, maxBytes: 64, types: ["image/png"] };
+      await expect(api.put(mine, "a/three.pdf", PDF, "application/pdf")).rejects.toMatchObject({
+        code: STORAGE_API_ERROR.typeRefused,
+      });
+
+      rules = { ...rules, signedUrlSeconds: 60 };
+      const link = await api.sign(mine, "a/one.pdf", 10_000);
+      expect(link.expiresAt).toEqual(new Date(now.getTime() + 60_000));
+    });
+
+    it("fail closed: when the rules cannot be read, nothing is stored", async () => {
+      const mine = await api.authenticate((await issue()).token);
+      rules = undefined as never;
+      await expect(api.put(mine, "a/one.pdf", PDF, "application/pdf")).rejects.toThrow();
+      expect(await api.head(mine, "a/one.pdf").catch((e: unknown) => e)).toMatchObject({
+        code: STORAGE_API_ERROR.notFound,
+      });
     });
   });
 

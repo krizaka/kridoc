@@ -13,10 +13,11 @@ import { installationVaultOf } from "@/lib/storage/document-vault";
 import { objectStoreOf, platformFetch } from "@/lib/storage/object-store";
 import { signedLinksOf } from "@/lib/storage/signed-links";
 import { createStorageApi, type LinkQuery, STORAGE_API_ACTION, type StorageApi } from "@/lib/storage/storage-api";
-import type { StorageAuditLine } from "@/lib/storage/storage-audit";
 import { createStorageClients, type StorageClients } from "@/lib/storage/storage-clients";
+import type { StorageRulesSource } from "@/lib/storage/storage-settings";
 
 import { logKeyEvent, storageConfigOf, vaultRootKeyOf } from "./storage-edge";
+import { storageRulesFor, storageTrailOf } from "./storage-rules-edge";
 import { systemClock } from "./system-clock";
 
 /** The path of the signed links (app/api/storage/v1/links/[...key]). */
@@ -31,14 +32,6 @@ const limiter = createLimiter({
   onStoreError: (_error, action) => console.error(`storage-api: the limiter failed on ${action}`),
 });
 
-/** An audit line, until @krizaka/audit is wired (the admin slice): the act, the client, the tenant, the key's hash; never a token or a key. */
-export const logStorageEvent = async (line: StorageAuditLine): Promise<void> => {
-  const key = line.keyHash ? ` key#${line.keyHash}` : "";
-  console.info(
-    `storage-api: ${line.action} client=${line.clientId} tenant=${line.tenantId}${key} ${JSON.stringify(line.detail ?? {})}`,
-  );
-};
-
 /** A signed link's absolute address: the key in the path (each segment encoded), the claim in the query. */
 export function linkUrlOf(origin: string, query: LinkQuery): string {
   const url = new URL(`${LINKS_PATH}/${query.key.split("/").map(encodeURIComponent).join("/")}`, origin);
@@ -49,6 +42,8 @@ export function linkUrlOf(origin: string, query: LinkQuery): string {
 export interface StorageApiRuntime {
   api: StorageApi;
   clients: StorageClients;
+  /** The administrator's rules, asked by the route for the size it reads (the service asks again for the types and the link's life). */
+  rules: StorageRulesSource;
   env: Env;
 }
 
@@ -62,7 +57,7 @@ export function storageClientsOf(env: Env): StorageClients {
     store: createStorageClientStore(query),
     tokens: clientTokensOf(derivedSecretOf(parseVaultKey(vaultRootKeyOf(env)), SECRET_PURPOSE.clientToken)),
     clock: systemClock,
-    audit: logStorageEvent,
+    audit: storageTrailOf(env).audit,
   });
 }
 
@@ -77,16 +72,18 @@ export function storageApiRuntime(env: Env = readEnv()): StorageApiRuntime {
   const vault = installationVaultOf({ rootKey, keys: dbTenantKeyStore(query), clock: systemClock, audit: logKeyEvent });
   const installation = objectStoreOf(storageConfigOf(env), { fetch: platformFetch, clock: systemClock });
   const clients = storageClientsOf(env);
+  const rules = storageRulesFor(env);
   const api = createStorageApi({
     clients,
     objectsOf: (tenantId) => tenantStore(installation, vault, tenantId),
     limiter,
     links: signedLinksOf(derivedSecretOf(parseVaultKey(rootKey), SECRET_PURPOSE.signedLink)),
     clock: systemClock,
-    audit: logStorageEvent,
+    audit: storageTrailOf(env).audit,
     limits: SETTINGS.storageApi,
+    rules,
   });
-  return { api, clients, env };
+  return { api, clients, rules, env };
 }
 
 /** A route of a product's client, whole: the feature check, the token (and the limiter), then the route's one service call. */

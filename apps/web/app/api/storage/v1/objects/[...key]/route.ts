@@ -1,5 +1,4 @@
 import { jsonOf } from "@/lib/auth/http";
-import { SETTINGS } from "@/lib/env";
 import { boundedBody, headResponse, keyOfSegments, objectResponse } from "@/lib/storage/api-http";
 
 import { storageApiRoute } from "../../../../../storage-api-edge";
@@ -14,8 +13,8 @@ const keyOf = async ({ params }: Params) => keyOfSegments((await params).key);
 
 /** Keeps an object under the client's own tenant (the raw body, its `Content-Type`); an existing key is replaced. */
 export async function PUT(request: Request, params: Params) {
-  return storageApiRoute(request, async ({ api, client }) => {
-    const bytes = await boundedBody(request, SETTINGS.storageApi.maxBytes);
+  return storageApiRoute(request, async ({ api, client, rules }) => {
+    const bytes = await boundedBody(request, (await rules()).maxBytes);
     const type = request.headers.get("content-type") ?? "";
     const stored = await api.put(client, await keyOf(params), bytes, type);
     return jsonOf({ object: stored }, { status: 201 });

@@ -6,19 +6,25 @@ import { join } from "node:path";
 import { memoryTenantKeyStore, type ObjectStore } from "@krizaka/storage";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { SETTINGS } from "@/lib/env";
-
 import type { DocumentRecord, DocumentStore, NewDocument, OwnerObjects } from "./document-port";
 import { createDocumentService, type DocumentService, documentView, objectKeyOf } from "./document-service";
 import { accountTenantOf, ownerObjectsOf } from "./document-vault";
 import { objectStoreOf } from "./object-store";
 import { STORAGE_PROVIDER } from "./providers";
+import type { StorageAuditLine } from "./storage-audit";
+import type { StorageRules } from "./storage-settings";
 
 const A = "00000000-0000-4000-8000-00000000000a";
 const B = "00000000-0000-4000-8000-00000000000b";
 const PDF = new TextEncoder().encode("%PDF-1.7\n1 0 obj << >> endobj\n%%EOF\n");
 const TEXT = new TextEncoder().encode("just some words, not a document type Kridoc keeps");
 const AT = new Date("2026-11-15T10:00:00Z");
+const RULES: StorageRules = {
+  maxBytes: 25 * 1024 * 1024,
+  types: ["application/pdf", "image/png", "image/jpeg", "image/webp"],
+  signedUrlSeconds: 300,
+  retentionDays: 365,
+};
 
 /** The metadata port in memory, with the same owner rule as the SQL adapter (lib/db/document-store.ts, tested on PostgreSQL). */
 function memoryDocumentStore(): DocumentStore & { failNextAdd(): void } {
@@ -53,6 +59,8 @@ describe("Kridoc's documents on the local adapter", () => {
   let documents: ReturnType<typeof memoryDocumentStore>;
   let service: DocumentService;
   let ids: number;
+  let rules: StorageRules;
+  let audit: StorageAuditLine[];
 
   beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), "kridoc-documents-"));
@@ -73,11 +81,16 @@ describe("Kridoc's documents on the local adapter", () => {
     });
     documents = memoryDocumentStore();
     ids = 0;
+    rules = RULES;
+    audit = [];
     service = createDocumentService({
       documents,
       objects,
       newId: () => `00000000-0000-4000-8000-1000000000${String(++ids).padStart(2, "0")}`,
-      limits: SETTINGS.documents,
+      rules: async () => rules,
+      audit: async (line) => {
+        audit.push(line);
+      },
     });
   });
   afterEach(async () => {
@@ -165,11 +178,35 @@ describe("Kridoc's documents on the local adapter", () => {
       documents,
       objects,
       newId: () => "00000000-0000-4000-8000-200000000001",
-      limits: { maxBytes: 8, types: SETTINGS.documents.types },
+      rules: async () => ({ ...rules, maxBytes: 8 }),
+      audit: async () => {},
     });
     await expect(small.upload(A, { bytes: PDF, name: "bail.pdf" })).rejects.toMatchObject({ code: "FILE_TOO_BIG" });
     expect(await bucket.list("")).toEqual([]);
     expect(await service.list(A)).toEqual([]);
+  });
+
+  it("reads the rules on every upload: a lowered limit or a removed type refuses the next file at once", async () => {
+    await service.upload(A, { bytes: PDF, name: "one.pdf" });
+    rules = { ...RULES, maxBytes: PDF.byteLength - 1 };
+    await expect(service.upload(A, { bytes: PDF, name: "two.pdf" })).rejects.toMatchObject({ code: "FILE_TOO_BIG" });
+    rules = { ...RULES, types: ["image/png"] };
+    await expect(service.upload(A, { bytes: PDF, name: "three.pdf" })).rejects.toMatchObject({
+      code: "FILE_TYPE_REFUSED",
+    });
+    expect(await service.list(A)).toHaveLength(1);
+  });
+
+  it("audits the upload, the read and the delete by account and tenant, never by title or key", async () => {
+    const record = await service.upload(A, { bytes: PDF, name: "secret-lease.pdf" });
+    await service.read(A, record.id);
+    await service.remove(A, record.id);
+    expect(audit.map((l) => l.action)).toEqual(["storage.uploaded", "storage.read", "storage.deleted"]);
+    expect(
+      audit.every((l) => l.actor.kind === "account" && l.actor.id === A && l.tenantId === accountTenantOf(A)),
+    ).toBe(true);
+    expect(JSON.stringify(audit)).not.toContain("secret-lease");
+    expect(JSON.stringify(audit)).not.toContain(record.id);
   });
 
   it("removes the bytes when the metadata cannot be written", async () => {

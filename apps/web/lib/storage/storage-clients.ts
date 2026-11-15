@@ -11,7 +11,7 @@ import {
   type StorageScope,
 } from "./client-port";
 import type { ClientTokens } from "./client-tokens";
-import { STORAGE_AUDIT, type StorageAudit } from "./storage-audit";
+import { AUDIT_ACTOR, STORAGE_AUDIT, type StorageAudit } from "./storage-audit";
 
 /** What an administrator asks for: a product, its tenant for one environment, and what the token may do. */
 export interface ClientRequest {
@@ -66,7 +66,7 @@ const isId = (id: string): boolean => z.uuid().safeParse(id).success;
 /** The products' clients: issued and revoked by an administrator (the CLI), authenticated at every API call. */
 export function createStorageClients(deps: StorageClientsDeps): StorageClients {
   const audited = (action: typeof STORAGE_AUDIT.issued | typeof STORAGE_AUDIT.revoked, client: StorageClient) =>
-    deps.audit({ action, clientId: client.id, tenantId: client.tenantId });
+    deps.audit({ action, actor: { kind: AUDIT_ACTOR.client, id: client.id }, tenantId: client.tenantId });
   return {
     async issue(request) {
       const accepted = acceptedRequest(request);

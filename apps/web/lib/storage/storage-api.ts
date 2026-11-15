@@ -13,19 +13,15 @@ import {
 import { STORAGE_API_ERROR, StorageApiError } from "./api-errors";
 import { STORAGE_SCOPE, type StorageClient, type StorageScope } from "./client-port";
 import type { LinkClaim, SignedLinks } from "./signed-links";
-import { keyHashOf, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
+import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
 import type { StorageClients } from "./storage-clients";
+import type { StorageRules, StorageRulesSource } from "./storage-settings";
 
 /** The limiter's action of every API call, counted per client (`perSubject`, the client's id). */
 export const STORAGE_API_ACTION = "storage.api";
 
-/** The rules every object obeys, passed in (SETTINGS.storageApi today, the admin's settings per tenant later). */
+/** The technical bound of the API (SETTINGS.storageApi); the rules an administrator sets come through `StorageApiDeps.rules`. */
 export interface StorageApiLimits {
-  maxBytes: number;
-  /** The types a client may declare; bytes that are a known type (magic number) must be that type. */
-  types: readonly string[];
-  /** The longest a signed link lives. */
-  signedUrlSeconds: number;
   /** The most objects one list answers. */
   listMax: number;
 }
@@ -39,6 +35,8 @@ export interface StorageApiDeps {
   clock: Clock;
   audit: StorageAudit;
   limits: StorageApiLimits;
+  /** The administrator's rules (size, types, link lifetime), read on every upload and every link: a change applies at once. */
+  rules: StorageRulesSource;
 }
 
 /** A signed link as query parameters: `client`, `key`, `expires` (seconds since 1970), `signature`. */
@@ -95,10 +93,10 @@ function checkedPrefix(prefix: string): string {
  * The declared type when the rules accept it and the bytes do not contradict it: bytes of a known type (magic number) must be that
  * type, so they cannot hide under `application/octet-stream` (the type of a product's own ciphertext, which sniffs as nothing).
  */
-function acceptedType(bytes: Uint8Array, declared: string, limits: StorageApiLimits): string {
-  if (bytes.byteLength === 0 || bytes.byteLength > limits.maxBytes) throw refused(STORAGE_API_ERROR.tooBig);
+function acceptedType(bytes: Uint8Array, declared: string, rules: StorageRules): string {
+  if (bytes.byteLength === 0 || bytes.byteLength > rules.maxBytes) throw refused(STORAGE_API_ERROR.tooBig);
   const type = declared.split(";")[0]!.trim().toLowerCase();
-  if (!limits.types.includes(type)) throw refused(STORAGE_API_ERROR.typeRefused);
+  if (!rules.types.includes(type)) throw refused(STORAGE_API_ERROR.typeRefused);
   const sniffed = sniffType(bytes);
   if (sniffed !== null && sniffed !== type) throw refused(STORAGE_API_ERROR.typeRefused);
   return type;
@@ -131,10 +129,10 @@ function validClaim(deps: StorageApiDeps, query: LinkQuery): LinkClaim {
 /** What every act needs: its audit line, the client's own store, the limiter's count. */
 function actsOf(deps: StorageApiDeps) {
   return {
-    note: (action: StorageAuditAction, client: StorageClient, key?: string, detail?: Record<string, number>) =>
+    note: (action: StorageAuditAction, client: StorageClient, key?: string, detail?: Record<string, number | string>) =>
       deps.audit({
         action,
-        clientId: client.id,
+        actor: { kind: AUDIT_ACTOR.client, id: client.id },
         tenantId: client.tenantId,
         ...(key === undefined ? {} : { keyHash: keyHashOf(key) }),
         ...(detail ? { detail } : {}),
@@ -150,9 +148,10 @@ function actsOf(deps: StorageApiDeps) {
 /** The signed links: a claim signed for one object of the client's tenant, and its reading while it lives. */
 function linksOf(deps: StorageApiDeps, acts: ReturnType<typeof actsOf>): Pick<StorageApi, "sign" | "readLink"> {
   return {
-    async sign(client, key, ttlSeconds = deps.limits.signedUrlSeconds) {
+    async sign(client, key, ttlSeconds) {
       need(client, STORAGE_SCOPE.sign);
-      const ttl = Math.max(1, Math.min(Math.trunc(ttlSeconds), deps.limits.signedUrlSeconds));
+      const longest = (await deps.rules()).signedUrlSeconds;
+      const ttl = Math.max(1, Math.min(Math.trunc(ttlSeconds ?? longest), longest));
       const expiresAt = Math.floor(deps.clock.now().getTime() / 1000) + ttl;
       const claim = { clientId: client.id, key: checkedKey(key), expiresAt };
       await acts.note(STORAGE_AUDIT.signed, client, key, { seconds: ttl });
@@ -168,7 +167,7 @@ function linksOf(deps: StorageApiDeps, acts: ReturnType<typeof actsOf>): Pick<St
       if (!client?.scopes.includes(STORAGE_SCOPE.sign)) throw refused(STORAGE_API_ERROR.linkRefused);
       await acts.limited(client);
       const object = await found(acts.storeOf(client), checkedKey(claim.key));
-      await acts.note(STORAGE_AUDIT.linkRead, client, claim.key);
+      await acts.note(STORAGE_AUDIT.read, client, claim.key, { via: "link" });
       return object;
     },
   };
@@ -186,9 +185,9 @@ export function createStorageApi(deps: StorageApiDeps): StorageApi {
     async put(client, key, bytes, declaredType) {
       need(client, STORAGE_SCOPE.put);
       const checked = checkedKey(key);
-      const contentType = acceptedType(bytes, declaredType, deps.limits);
+      const contentType = acceptedType(bytes, declaredType, await deps.rules());
       await storeOf(client).put(checked, bytes, { contentType });
-      await note(STORAGE_AUDIT.put, client, checked, { size: bytes.byteLength });
+      await note(STORAGE_AUDIT.uploaded, client, checked, { size: bytes.byteLength });
       return { key: checked, size: bytes.byteLength, contentType };
     },
     async get(client, key) {

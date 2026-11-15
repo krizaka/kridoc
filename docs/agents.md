@@ -42,6 +42,21 @@ every string in `messages/*.json`, `@krizaka/ui` blocks, tests with every change
   `storageApi.errors`), limits `SETTINGS.storageApi`. Same switch as the documents (`MEDIA_STORAGE_ENABLED`, off: every route 404). The
   contract with Verikora is `docs/architecture/kridoc-storage-api.v1.openapi.yaml` (Verikora generates its types from a copy) and
   `objectStoreContract`, run against the routes through `lib/storage/kridoc-api-store.ts`.
+- **Storage settings, audit and retention** (krizaka-internal#3755, slice 4 of the design note): the rules every upload and every link obeys are
+  settings of `@krizaka/settings` (`apps/web/lib/storage/storage-settings.ts`: `storage.maxMb` 1-100, `storage.allowedTypes`, `storage.signedUrlSeconds`
+  30-3600, `storage.retentionDays` 30-3650; global scope, defaults = what the code did before), read on **every** upload and link by the documents
+  routes/service and by the storage API (`StorageRulesSource`, built in `app/storage-rules-edge.ts` over `dbSettings`, a 5 s cache). Only an
+  `ADMIN` reads or changes them (`lib/storage/storage-settings-admin.ts`: the role, then every key against the registry's bounds so a change is whole
+  or not at all, then one `storage.settings.changed` line per changed value). The screen is `/{locale}/admin/storage` (`app/[locale]/(admin)/`, on
+  `@krizaka/ui`, FR and EN; not found for anyone but an administrator), its route `PUT/GET /api/admin/storage-settings`, its words under `storageAdmin`.
+  Audit lines go through `@krizaka/audit` (schema `audit`, `infra/migrations/2026-11-19-settings-audit.sql`): `storage.uploaded`, `storage.read`,
+  `storage.deleted`, `storage.settings.changed`, plus the API's head/list/sign and the client issue/revoke; by actor (client, account or job), tenant and
+  key hash, never a token, a key's words or a title (`lib/storage/audit-trail.ts`). The **retention sweep** (`pnpm storage:sweep`, `lib/storage/retention-sweep.ts`):
+  removes the documents past the retention, then the objects of an owner that have no row (each asked again right before it goes: an upload in flight
+  puts its bytes before its row), a bounded batch per run (`SETTINGS.retentionSweep`, the owner cursor in `storage_sweep_cursor`); it fails closed
+  (rules unreadable or a store failing: the run stops, nothing more is deleted). Only Kridoc's own documents are swept: a product's tenant
+  (`verikora-prod`) keeps its objects until the product deletes them. The journey is `pnpm test:e2e` (Playwright, `apps/web/e2e/`; needs `DATABASE_URL`
+  on a throwaway server: it makes and drops its own database `kridoc_e2e`).
 - `dev-preview.json` is data: `devPreview` is claimed only when every criterion has fresh evidence.
 
 ## 9. Anti-slop (ADR-015)
