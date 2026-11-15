@@ -57,5 +57,16 @@
       "UNAUTHENTICATED": "Sign in to continue.",
       "INTERNAL": "Something went wrong on our side. Try again later."
     }
+  },
+  "documents": {
+    "errors": {
+      "DOCUMENTS_OFF": "Not found.",
+      "DOCUMENT_NOT_FOUND": "This document does not exist.",
+      "NO_FILE": "Choose a file to send.",
+      "FILE_TOO_BIG": "This file is too large.",
+      "FILE_TYPE_REFUSED": "This kind of file is not accepted.",
+      "UNAUTHENTICATED": "Sign in to continue.",
+      "INTERNAL": "Something went wrong on our side. Try again later."
+    }
   }
 }

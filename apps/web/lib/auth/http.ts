@@ -1,6 +1,6 @@
 import { RateLimited } from "@krizaka/rate-limit";
 
-import { getDictionary } from "@/lib/i18n";
+import { getDictionary, type Locale } from "@/lib/i18n";
 import { preferredLocale } from "@/lib/locale";
 
 import { AUTH_ERROR, AUTH_STATUS, AuthError, type AuthErrorCode } from "./errors";
@@ -30,21 +30,32 @@ function codeOf(error: unknown): AuthErrorCode {
   return AUTH_ERROR.internal;
 }
 
+/** The visitor's language for a refusal: the cookie first, then the browser's. */
+export const localeOfRequest = (request: Request): Locale =>
+  preferredLocale(cookieValue(request, LOCALE_COOKIE), request.headers.get("accept-language"));
+
+/** A refusal as Problem Details (RFC 9457): what `krizakaFetch` of @krizaka/query reads; `code` is the stable slug, `detail` the words. */
+export function problemOf(
+  code: string,
+  status: number,
+  detail: string,
+  headers: Record<string, string> = {},
+): Response {
+  return jsonOf(
+    { type: "about:blank", title: code, status, code, detail },
+    { status, headers: { "Content-Type": "application/problem+json", ...headers } },
+  );
+}
+
 /** The one place a refusal becomes an HTTP answer: status from the code, words from the catalogue in the visitor's language, `Retry-After` when limited. */
 export function refusal(error: unknown, request: Request): Response {
   const code = codeOf(error);
   // Only the kind of failure is logged: never a message (a driver's can carry a value), a body or a header.
   if (code === AUTH_ERROR.internal)
     console.error(`accounts: unexpected failure (${error instanceof Error ? error.name : typeof error})`);
-  const locale = preferredLocale(cookieValue(request, LOCALE_COOKIE), request.headers.get("accept-language"));
-  const message = getDictionary(locale).auth.errors[code];
+  const message = getDictionary(localeOfRequest(request)).auth.errors[code];
   const headers = error instanceof RateLimited ? error.headers : {};
-  const status = AUTH_STATUS[code];
-  // Problem Details (RFC 9457): what `krizakaFetch` of @krizaka/query reads; `code` is the stable slug, `detail` the words.
-  return jsonOf(
-    { type: "about:blank", title: code, status, code, detail: message },
-    { status, headers: { "Content-Type": "application/problem+json", ...headers } },
-  );
+  return problemOf(code, AUTH_STATUS[code], message, headers);
 }
 
 /** A route's body, read as JSON; anything else is `INVALID_INPUT`. */

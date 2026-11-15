@@ -84,3 +84,30 @@ services:
       - key: AUTH_SESSION_SECRET
         scope: RUN_TIME
         type: SECRET
+      # Kridoc's own documents (krizaka-internal#3719): off until the founder turns them on. With MEDIA_STORAGE_ENABLED on, the boot
+      # requires AUTH_ENABLED on, the s3 provider, MEDIA_DOCUMENTS_TENANT and the bucket's settings with a Canadian region (Law 25,
+      # apps/web/lib/env.ts). Bucket and keys by the founder, in the secret store.
+      - key: MEDIA_STORAGE_ENABLED
+        scope: RUN_TIME
+        value: "off"
+      - key: MEDIA_STORAGE_PROVIDER
+        scope: RUN_TIME
+        value: s3
+      - key: MEDIA_DOCUMENTS_TENANT
+        scope: RUN_TIME
+        value: kridoc-prod
+      - key: MEDIA_S3_ENDPOINT
+        scope: RUN_TIME
+        value: https://tor1.digitaloceanspaces.com
+      - key: MEDIA_S3_REGION
+        scope: RUN_TIME
+        value: tor1
+      - key: MEDIA_S3_BUCKET
+        scope: RUN_TIME
+        type: SECRET
+      - key: MEDIA_S3_ACCESS_KEY_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: MEDIA_S3_SECRET_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
