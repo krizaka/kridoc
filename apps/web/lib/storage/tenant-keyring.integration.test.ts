@@ -2,7 +2,7 @@ import { createTestDatabase, endPool, type TestDatabase } from "@krizaka/db/test
 import { dbTenantKeyStore } from "@krizaka/storage";
 import { tenantKeyStoreContract } from "@krizaka/storage/testkit";
 import type pg from "pg";
-import { afterAll, beforeAll, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { connectionOf } from "@/lib/db/connection";
 import { integrationPools } from "@/lib/db/integration-pool";
@@ -33,6 +33,15 @@ describe("the tenant keyring on PostgreSQL (krizaka-internal#3754)", () => {
   afterAll(async () => {
     for (const made of all()) await endPool(made);
     await testDatabase?.drop();
+  });
+
+  it("are created by Kridoc's migrations in the storage schema, recorded as storage v2", async () => {
+    const tables = await pool.query(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'storage' ORDER BY table_name",
+    );
+    expect(tables.rows.map((r) => r.table_name)).toEqual(["tenant_key", "tenant_keyring"]);
+    const marker = await pool.query("SELECT module, version FROM public.krizaka_module_versions");
+    expect(marker.rows).toEqual([{ module: "storage", version: 2 }]);
   });
 
   // The contract asks for an empty store each time: the real tables, emptied (the tests of one file run one after the other).
