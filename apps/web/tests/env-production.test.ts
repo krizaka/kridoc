@@ -6,6 +6,7 @@ import {
   productionProblems,
   readEnv,
   type Requirement,
+  SETTINGS,
 } from "../lib/env";
 
 const NEEDS_FEATURE_KEY: Requirement = {
@@ -49,8 +50,48 @@ describe("production environment", () => {
       /Kridoc refuses to start: DATABASE_URL is not set/,
     );
   });
-  it("declares the requirements of the database feature", () => {
-    expect(PRODUCTION_REQUIREMENTS.map((r) => r.key)).toEqual(["DATABASE_URL", "DATABASE_CA_CERT"]);
+  it("declares the requirements of the database and accounts features", () => {
+    expect(PRODUCTION_REQUIREMENTS.map((r) => r.key)).toEqual([
+      "DATABASE_URL",
+      "DATABASE_CA_CERT",
+      "AUTH_ENABLED",
+      "AUTH_SESSION_SECRET",
+    ]);
+  });
+  it("asks nothing for accounts while AUTH_ENABLED is off (the default)", () => {
+    expect(productionProblems(production())).toEqual([]);
+    expect(productionProblems(production({ AUTH_ENABLED: "off" }))).toEqual([]);
+  });
+  it("names the database feature and the session secret when accounts are on and they are missing", () => {
+    expect(productionProblems(production({ AUTH_ENABLED: "on" }))).toEqual([
+      "DATABASE_ENABLED is not on (the accounts feature needs the database)",
+      "AUTH_SESSION_SECRET is not set (the accounts feature is on)",
+    ]);
+  });
+  it("refuses a session secret shorter than the setting, without showing it", () => {
+    const short = "x".repeat(SETTINGS.sessionSecretMinLength - 1);
+    const problems = productionProblems(
+      production({
+        AUTH_ENABLED: "on",
+        DATABASE_ENABLED: "on",
+        DATABASE_URL: "postgresql://u:p@h/d",
+        AUTH_SESSION_SECRET: short,
+      }),
+    );
+    expect(problems).toEqual([`AUTH_SESSION_SECRET is shorter than ${SETTINGS.sessionSecretMinLength} characters`]);
+    expect(problems.join(" ")).not.toContain(short);
+  });
+  it("starts with accounts on once the database and a long enough secret are there", () => {
+    expect(
+      productionProblems(
+        production({
+          AUTH_ENABLED: "on",
+          DATABASE_ENABLED: "on",
+          DATABASE_URL: "postgresql://u:p@h/d",
+          AUTH_SESSION_SECRET: "s".repeat(SETTINGS.sessionSecretMinLength),
+        }),
+      ),
+    ).toEqual([]);
   });
   it("asks for nothing in development and in tests", () => {
     expect(productionProblems(readEnv({ NODE_ENV: "development" }), [NEEDS_FEATURE_KEY])).toEqual([]);

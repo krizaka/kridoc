@@ -17,6 +17,14 @@ every string in `messages/*.json`, `@krizaka/ui` blocks, tests with every change
   drops `public` and migrates from zero. The database tests (`lib/db/*.integration.test.ts`) need a real PostgreSQL and fail without
   `DATABASE_URL` (CI starts one; locally `docker run -p 55432:5432 -e POSTGRES_USER=kridoc_db -e POSTGRES_PASSWORD=ci-only-password postgres:16`).
   The feature is off by default (`DATABASE_ENABLED`): only when it is `on` does production require `DATABASE_URL` and `DATABASE_CA_CERT`.
+- **Accounts** (krizaka-internal#3718): Kridoc's own users and sessions, on its own database, with `@krizaka/auth` and `@krizaka/rate-limit`. Tables
+  `account` and `session` (`infra/migrations/2026-11-16-accounts-sessions.sql`); ports and services in `apps/web/lib/auth/` (`account-store.ts`,
+  `auth-service.ts`: sign-in with the lock after `SETTINGS.maxFailedSignIns` wrong passwords, sign-up, sign-out); the composition root is
+  `apps/web/app/accounts-edge.ts`; routes `app/api/auth/{sign-in,sign-up,sign-out}` are thin; every refusal is an `AuthError` with a stable code,
+  mapped once in `lib/auth/http.ts` (Problem Details, words in `messages/*.json` under `auth.errors`). Off by default (`AUTH_ENABLED`): then every
+  account route and page answers 404 and nothing is required. On, production requires `DATABASE_ENABLED=on` and `AUTH_SESSION_SECRET` (32+ characters).
+  Sign-up is closed (`AUTH_SIGNUP=closed`, the default); the first administrator is made by `pnpm auth:create-admin` (`AUTH_ADMIN_EMAIL`,
+  `AUTH_ADMIN_PASSWORD` from the environment, never argv). The rate-limit counters are in memory (one instance); a shared store is a follow-up. No password, hash or token is ever logged.
 - `dev-preview.json` is data: `devPreview` is claimed only when every criterion has fresh evidence.
 
 ## 9. Anti-slop (ADR-015)

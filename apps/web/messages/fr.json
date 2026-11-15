@@ -26,5 +26,36 @@
     "sourceAria": "Le code source de Kridoc sur GitHub",
     "products": "Nos produits",
     "productsAria": "Les produits Krizaka sur krizaka.com (en français)"
+  },
+  "auth": {
+    "meta": {
+      "signIn": "Connexion"
+    },
+    "signIn": {
+      "title": "Connexion",
+      "description": "Votre compte Kridoc.",
+      "promise": "Vos documents d'entreprise, rangés et retrouvés.",
+      "email": "Adresse courriel",
+      "password": "Mot de passe",
+      "submit": "Se connecter",
+      "closedTitle": "Inscriptions fermées",
+      "closed": "Kridoc n'est pas encore ouvert. Les comptes sont créés sur invitation.",
+      "back": "Retour au site",
+      "done": "Connecté.",
+      "failed": "Un problème est survenu. Réessayez."
+    },
+    "errors": {
+      "ACCOUNTS_OFF": "Introuvable.",
+      "INVALID_INPUT": "Vérifiez l'adresse et le mot de passe, puis réessayez.",
+      "INVALID_CREDENTIALS": "Adresse ou mot de passe incorrect.",
+      "ACCOUNT_LOCKED": "Ce compte est verrouillé après trop de mots de passe erronés. Écrivez-nous pour le rouvrir.",
+      "SIGNUP_CLOSED": "Inscriptions fermées. Kridoc n'est pas encore ouvert.",
+      "EMAIL_TAKEN": "Cette adresse a déjà un compte.",
+      "PASSWORD_TOO_SHORT": "Le mot de passe est trop court (12 caractères au moins).",
+      "PASSWORD_TOO_LONG": "Le mot de passe est trop long (256 caractères au plus).",
+      "RATE_LIMITED": "Trop d'essais. Patientez un instant puis réessayez.",
+      "UNAUTHENTICATED": "Connectez-vous pour continuer.",
+      "INTERNAL": "Un problème est survenu de notre côté. Réessayez plus tard."
+    }
   }
 }
