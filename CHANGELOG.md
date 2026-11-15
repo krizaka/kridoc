@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/krizaka/kridoc/compare/v0.7.0...v0.8.0) (2026-11-15)
+
+
+### Features
+
+* **storage:** the storage API for Krizaka's products, one tenant per token (krizaka-internal[#3756](https://github.com/krizaka/kridoc/issues/3756)) ([#59](https://github.com/krizaka/kridoc/issues/59)) ([b6573ca](https://github.com/krizaka/kridoc/commit/b6573caff2e1c041856156458e3198de319c33f5))
+
 ## [0.7.0](https://github.com/krizaka/kridoc/compare/v0.6.0...v0.7.0) (2026-11-15)
 
 
