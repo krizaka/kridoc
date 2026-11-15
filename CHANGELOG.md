@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/krizaka/kridoc/compare/v0.8.0...v0.9.0) (2026-11-15)
+
+
+### Features
+
+* **storage-admin:** storage limits, retention and audit set in the admin ([#61](https://github.com/krizaka/kridoc/issues/61)) ([1933a7b](https://github.com/krizaka/kridoc/commit/1933a7b41dd0188d7ec3a5d0fb2339df2a4ea054))
+
 ## [0.8.0](https://github.com/krizaka/kridoc/compare/v0.7.0...v0.8.0) (2026-11-15)
 
 
