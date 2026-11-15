@@ -1,6 +1,6 @@
 # Kridoc's storage service
 
-Status: design, slice 1 built (krizaka-internal#3719, slice D of #3714). Founder: « kridoc are responsable to exopse storages to all
+Status: design, slices 1 and 3 built (krizaka-internal#3719, slice D of #3714; encryption per account krizaka-internal#3754). Founder: « kridoc are responsable to exopse storages to all
 our apps » (2026-11-14); « chaque produit est indepedant donc il mange ses users » (2026-11-15). Law 25: personal data stays in Canada.
 
 ## Résumé (français)
@@ -13,15 +13,16 @@ our apps » (2026-11-14); « chaque produit est indepedant donc il mange ses use
 6. Les liens signés vivent quelques minutes ; les tailles, les types et la durée de conservation sont des réglages de l'admin.
 7. Chaque dépôt, lecture, suppression et changement de réglage laisse une ligne d'audit.
 8. Verikora ajoute « Kridoc » comme fournisseur dans son registre (ADR-005), puis déplace ses documents avec son déplacement vérifié.
-9. Tranche 1 (cette PR) : les documents des comptes Kridoc, derrière `MEDIA_STORAGE_ENABLED` (éteint par défaut).
+9. Tranches 1 et 3 : les documents des comptes Kridoc, derrière `MEDIA_STORAGE_ENABLED` (éteint par défaut) ; chaque compte a sa
+   propre clé (enveloppe, clé racine `MEDIA_VAULT_KEY`), détruite quand le compte est effacé : ses fichiers deviennent illisibles.
 10. À décider par le fondateur : le bucket canadien (fournisseur, coût) et ses clés.
 
 ## Two users of one store
 
-| Who                                      | Door                                | Tenant                                                          | Keys under                                            |
-| ---------------------------------------- | ----------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------- |
-| A person with a Kridoc account           | `/api/documents` (session cookie)   | the installation (`MEDIA_DOCUMENTS_TENANT`, e.g. `kridoc-prod`) | `t/<installation>/documents/<accountId>/<documentId>` |
-| Another Krizaka product (Verikora first) | `/api/storage/v1/…` (product token) | one per product and environment (`verikora-prod`)               | `t/<product>/<the product's own key>`                 |
+| Who                                      | Door                                | Tenant                                                          | Keys under                                                      |
+| ---------------------------------------- | ----------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------- |
+| A person with a Kridoc account           | `/api/documents` (session cookie)   | the installation (`MEDIA_DOCUMENTS_TENANT`, e.g. `kridoc-prod`) | `t/<installation>/t/account-<accountId>/documents/<documentId>` |
+| Another Krizaka product (Verikora first) | `/api/storage/v1/…` (product token) | one per product and environment (`verikora-prod`)               | `t/<product>/<the product's own key>`                           |
 
 Both sit on one `ObjectStore` of `@krizaka/storage` (`bucketStore` in production, `folderStore` in development and tests). The tenant
 is never read from a request: the installation's comes from the environment once at the edge; a product's comes from its token.
@@ -49,6 +50,14 @@ is never read from a request: the installation's comes from the environment once
 - **Audit.** `@krizaka/audit` lines: `document.uploaded`, `document.read`, `document.deleted`, `storage.object.*` (per product, by
   token id, never by key content), `storage.client.issued|revoked`, `storage.settings.changed`, and the `storage.key.*` lines of
   `tenantVault`.
+- **Encryption per account (slice 3).** Each Kridoc account is a tenant of `tenantVault` (`account-<accountId>`): its own key,
+  wrapped by the root key `MEDIA_VAULT_KEY` (32 bytes in base64, from the secret store: never in the database, never logged) and kept
+  wrapped in `storage.tenant_keyring` / `storage.tenant_key` (`storageSchema` v2, emitted by `emitMigration`). `tenantStore` seals every
+  object with a fresh data key and its full name as associated data, so the bucket holds ciphertext only and a copy under another
+  account's name does not open, even for whoever holds the bucket key. Erasing an account (`eraseOwner`) shreds its key first, then
+  deletes its objects: every copy, a backup included, is unreadable at once. Today the root key is held by the process
+  (`memoryKeyService` with the deployment's key); a cloud KMS (`cloudKeyService`, AWS KMS ca-central-1 or OVHcloud KMS) is the same
+  `KeyService` port, a founder decision.
 - **Retention.** Per tenant, as data; a daily job deletes what is past it and sweeps orphans (`sweepOrphans`).
 
 ## Verikora moves to Kridoc (ADR-005)
@@ -80,6 +89,6 @@ independent place and do not move to Kridoc.
 
 ## Environment
 
-`MEDIA_STORAGE_ENABLED` (`off`), `MEDIA_STORAGE_PROVIDER` (`local` | `s3`), `MEDIA_STORAGE_ROOT`, `MEDIA_DOCUMENTS_TENANT`,
+`MEDIA_STORAGE_ENABLED` (`off`), `MEDIA_STORAGE_PROVIDER` (`local` | `s3`), `MEDIA_STORAGE_ROOT`, `MEDIA_DOCUMENTS_TENANT`, `MEDIA_VAULT_KEY`,
 `MEDIA_S3_ENDPOINT`, `MEDIA_S3_REGION`, `MEDIA_S3_BUCKET`, `MEDIA_S3_ACCESS_KEY_ID`, `MEDIA_S3_SECRET_ACCESS_KEY`. The
 brief's `STORAGE_ENABLED` is `MEDIA_STORAGE_ENABLED`: variables are named by bounded context (`tests/env.test.ts`).
