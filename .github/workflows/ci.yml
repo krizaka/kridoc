@@ -22,6 +22,11 @@ jobs:
       package-manager: pnpm
       typecheck-script: typecheck
       next-cache-paths: apps/web/.next/cache
+      # A real PostgreSQL for the database tests, never skipped (krizaka-internal#3717). Test values only: no real secret anywhere.
+      postgres-image: postgres:16
+      postgres-name: kridoc_db
+      env: |
+        DATABASE_URL=postgresql://kridoc_db:ci-only-password@localhost:5432/kridoc_db
       after-build: scripts/ci-after-build.sh
       # SonarCloud CI analysis with the coverage of apps/web (krizaka-internal#3553); the CTO turns Automatic Analysis off.
       sonar: true

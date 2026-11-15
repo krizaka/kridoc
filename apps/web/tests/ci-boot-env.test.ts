@@ -11,7 +11,6 @@ const exported = [...script.matchAll(/\b([A-Z][A-Z0-9_]*)=/g)].map((m) => m[1]);
 
 describe("the CI script that starts Kridoc in production", () => {
   it("exports every key the boot requires", () => {
-    // Empty while no feature needs a key (see PRODUCTION_REQUIREMENTS): the loop then checks nothing, and starts to the day a slice adds one.
     for (const { key } of PRODUCTION_REQUIREMENTS)
       expect(exported, `${key} in scripts/ci-after-build.sh`).toContain(key);
   });

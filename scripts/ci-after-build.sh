@@ -3,7 +3,8 @@
 # on the built site, and the routes of the DO spec (no list of routes: krizaka-deploy routes).
 set -euo pipefail
 export NODE_ENV=production PORT=3000
-# No key is required by the production boot today (PRODUCTION_REQUIREMENTS in apps/web/lib/env.ts): a slice that adds one exports a throwaway CI value here.
+# The keys the production boot requires (PRODUCTION_REQUIREMENTS in apps/web/lib/env.ts), as throwaway CI values: the database feature stays off (DATABASE_ENABLED), so none is used.
+export DATABASE_URL=postgresql://ci:ci-only-password@localhost:5432/ci DATABASE_CA_CERT=ci-placeholder
 trap 'tail -100 web.log || true' ERR
 (cd apps/web && pnpm exec next start -p 3000 > ../../web.log 2>&1 &)
 for _ in $(seq 1 60); do curl -sf http://localhost:3000/api/healthz && break; sleep 1; done

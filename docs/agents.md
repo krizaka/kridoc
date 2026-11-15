@@ -11,6 +11,12 @@ every string in `messages/*.json`, `@krizaka/ui` blocks, tests with every change
 - **DO routes**: the spec lists no route one by one (App Platform has no regex): one `/` per component; fine routing is code in the
   app (`lib/dev-host.ts`, `proxy.ts`) with tests.
 - Environment variables are declared once in `apps/web/lib/env.ts`, named by bounded context.
+- **Database** (krizaka-internal#3717): Kridoc owns its PostgreSQL, shared with no other product. The `@krizaka/db` client sits behind a port in
+  `apps/web/lib/db/` (`document-store.ts`; no query outside it); the schema is the dated files of `infra/migrations/YYYY-MM-DD-name.sql`
+  (never edited once applied: a change is a new file). `pnpm db:rebuild` (DATABASE_URL, never production, `--yes` for a remote host)
+  drops `public` and migrates from zero. The database tests (`lib/db/*.integration.test.ts`) need a real PostgreSQL and fail without
+  `DATABASE_URL` (CI starts one; locally `docker run -p 55432:5432 -e POSTGRES_USER=kridoc_db -e POSTGRES_PASSWORD=ci-only-password postgres:16`).
+  The feature is off by default (`DATABASE_ENABLED`): only when it is `on` does production require `DATABASE_URL` and `DATABASE_CA_CERT`.
 - `dev-preview.json` is data: `devPreview` is claimed only when every criterion has fresh evidence.
 
 ## 9. Anti-slop (ADR-015)
