@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/krizaka/kridoc/compare/v0.4.0...v0.5.0) (2026-11-15)
+
+
+### Features
+
+* **auth:** Kridoc's own users and sessions with @krizaka/auth ([#53](https://github.com/krizaka/kridoc/issues/53)) ([0b88d40](https://github.com/krizaka/kridoc/commit/0b88d402f6898430f9c0edeb9bed5b43589d69b2))
+
 ## [0.4.0](https://github.com/krizaka/kridoc/compare/v0.3.0...v0.4.0) (2026-11-15)
 
 
