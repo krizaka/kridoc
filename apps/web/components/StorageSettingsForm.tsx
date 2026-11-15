@@ -66,6 +66,28 @@ export interface StorageSettingsFormProps {
   current: { maxMb: number; signedUrlSeconds: number; retentionDays: number; types: readonly string[] };
 }
 
+const DEFAULTS_OF = (current: StorageSettingsFormProps["current"]) => ({
+  maxMb: String(current.maxMb),
+  signedUrlSeconds: String(current.signedUrlSeconds),
+  retentionDays: String(current.retentionDays),
+  ...Object.fromEntries(Object.entries(TYPE_FIELDS).map(([field, type]) => [field, current.types.includes(type)])),
+});
+
+/** The form's values as the settings API takes them: the numbers as numbers, the ticked boxes as the accepted types. */
+function changesOf(values: Record<string, unknown>): Record<string, unknown> {
+  const types = Object.entries(TYPE_FIELDS)
+    .filter(([field]) => values[field])
+    .map(([, type]) => type);
+  return {
+    "storage.maxMb": Number(values.maxMb),
+    "storage.signedUrlSeconds": Number(values.signedUrlSeconds),
+    "storage.retentionDays": Number(values.retentionDays),
+    "storage.allowedTypes": types,
+  };
+}
+
+const NUMBER_FIELDS = ["maxMb", "signedUrlSeconds", "retentionDays"] as const;
+
 /** The administrator's storage settings on @krizaka/ui's form. The server checks the bounds and answers a refusal in the visitor's language. */
 export function StorageSettingsForm({ locale, labels, current }: Readonly<StorageSettingsFormProps>) {
   const router = useRouter();
@@ -78,25 +100,12 @@ export function StorageSettingsForm({ locale, labels, current }: Readonly<Storag
   });
   const form = storageForm.useForm({
     i18n: { locale },
-    defaultValues: {
-      maxMb: String(current.maxMb),
-      signedUrlSeconds: String(current.signedUrlSeconds),
-      retentionDays: String(current.retentionDays),
-      ...Object.fromEntries(Object.entries(TYPE_FIELDS).map(([field, type]) => [field, current.types.includes(type)])),
-    } as never,
+    defaultValues: DEFAULTS_OF(current) as never,
     onSubmit: async (values) => {
       setProblem(null);
       setSaved(false);
-      const types = Object.entries(TYPE_FIELDS)
-        .filter(([field]) => values[field as keyof typeof TYPE_FIELDS])
-        .map(([, type]) => type);
       try {
-        await request.mutateAsync({
-          "storage.maxMb": Number(values.maxMb),
-          "storage.signedUrlSeconds": Number(values.signedUrlSeconds),
-          "storage.retentionDays": Number(values.retentionDays),
-          "storage.allowedTypes": types,
-        });
+        await request.mutateAsync(changesOf(values));
         setSaved(true);
       } catch (error) {
         setProblem(isKrizakaApiError(error) && error.detail ? error.detail : labels.failed);
@@ -105,19 +114,15 @@ export function StorageSettingsForm({ locale, labels, current }: Readonly<Storag
   });
   return (
     <form.Form aria-label={labels.title} className="flex flex-col gap-4">
-      <form.TextField name="maxMb" label={labels.maxMb.label} hint={labels.maxMb.hint} inputMode="numeric" />
-      <form.TextField
-        name="signedUrlSeconds"
-        label={labels.signedUrlSeconds.label}
-        hint={labels.signedUrlSeconds.hint}
-        inputMode="numeric"
-      />
-      <form.TextField
-        name="retentionDays"
-        label={labels.retentionDays.label}
-        hint={labels.retentionDays.hint}
-        inputMode="numeric"
-      />
+      {NUMBER_FIELDS.map((field) => (
+        <form.TextField
+          key={field}
+          name={field}
+          label={labels[field].label}
+          hint={labels[field].hint}
+          inputMode="numeric"
+        />
+      ))}
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium text-fg">{labels.types.legend}</legend>
         {Object.entries(TYPE_FIELDS).map(([field, type]) => (
