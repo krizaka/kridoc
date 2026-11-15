@@ -32,29 +32,32 @@ const withoutEmpty = (source: Source): Source =>
 
 export const readEnv = (source: Source = process.env): Env => envSchema.parse(withoutEmpty(source));
 
-const requiresTls = (url: string) => /sslmode=(require|verify)/.test(url);
+/** One thing a production server cannot run without: the check returns a problem sentence (naming the key, never its value) or null. */
+export type Requirement = { key: string; check: (env: Env) => string | null };
+
+/**
+ * The settings production cannot start without, as data per feature. EMPTY today: Kridoc has no database and no accounts yet,
+ * so nothing is required and the server starts with the four settings it has. Each slice adds its own requirement together
+ * with its feature, never before: slice B (krizaka-internal#3717) adds DATABASE_URL and DATABASE_CA_CERT (required when the URL
+ * asks for TLS), slice C (krizaka-internal#3718) adds AUTH_SESSION_SECRET (at least SETTINGS.sessionSecretMinLength characters).
+ * A key required here must also be exported by scripts/ci-after-build.sh and declared in .do/app.yaml (tests/ci-boot-env.test.ts).
+ */
+export const PRODUCTION_REQUIREMENTS: readonly Requirement[] = [];
 
 /** What a production server cannot run without — named, never shown. Nothing is asked outside production. */
-export function productionProblems(env: Env): string[] {
+export function productionProblems(env: Env, requirements: readonly Requirement[] = PRODUCTION_REQUIREMENTS): string[] {
   if (env.NODE_ENV !== "production") {
     return [];
   }
-  const problems: string[] = [];
-  if (!env.DATABASE_URL) {
-    problems.push("DATABASE_URL is not set");
-  }
-  if (!env.AUTH_SESSION_SECRET || env.AUTH_SESSION_SECRET.length < SETTINGS.sessionSecretMinLength) {
-    problems.push(`AUTH_SESSION_SECRET must be at least ${SETTINGS.sessionSecretMinLength} characters`);
-  }
-  if (env.DATABASE_URL && requiresTls(env.DATABASE_URL) && !env.DATABASE_CA_CERT) {
-    problems.push("DATABASE_CA_CERT is required for a TLS database");
-  }
-  return problems;
+  return requirements.flatMap((r) => r.check(env) ?? []);
 }
 
 /** Called once at server start: production does not boot with a problem. */
-export function assertProductionEnv(source: Source = process.env): void {
-  const problems = productionProblems(readEnv(source));
+export function assertProductionEnv(
+  source: Source = process.env,
+  requirements: readonly Requirement[] = PRODUCTION_REQUIREMENTS,
+): void {
+  const problems = productionProblems(readEnv(source), requirements);
   if (problems.length) {
     throw new Error(`Kridoc refuses to start: ${problems.join("; ")}`);
   }
