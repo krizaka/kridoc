@@ -27,7 +27,7 @@ export default async function SignInPage({
   const t = getDictionary(locale).auth.signIn;
   const { next } = await searchParams;
   // Back to where the visitor came from, only a path of this site (never another address).
-  const returnTo = next && isLocalReturn(next) ? next : `/${locale}`;
+  const returnTo = next && isLocalReturn(next) ? next : `/${locale}/account`;
   return (
     <AuthLayout
       brand={

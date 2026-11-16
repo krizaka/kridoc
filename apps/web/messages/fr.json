@@ -129,5 +129,48 @@
       "INVALID_SETTING": "Une valeur dépasse ses limites. Rien n'a été modifié.",
       "INTERNAL": "Un problème est survenu de notre côté. Réessayez plus tard."
     }
+  },
+  "account": {
+    "meta": {
+      "title": "Votre compte"
+    },
+    "title": "Votre compte",
+    "signOut": "Se déconnecter",
+    "adminLink": "Administration",
+    "documents": {
+      "title": "Vos documents",
+      "empty": "Aucun document pour l'instant",
+      "emptyHint": "Les fichiers que vous conservez avec Kridoc apparaîtront ici.",
+      "table": {
+        "caption": "Vos documents",
+        "title": "Titre",
+        "type": "Type",
+        "size": "Taille",
+        "added": "Ajouté le",
+        "kilobytes": "Ko"
+      }
+    }
+  },
+  "usersAdmin": {
+    "meta": {
+      "title": "Utilisateurs"
+    },
+    "title": "Utilisateurs",
+    "description": "Chaque compte, son rôle et son état. Les comptes sont créés par un administrateur.",
+    "storageLink": "Réglages du stockage",
+    "caption": "Utilisateurs de Kridoc",
+    "email": "Adresse e-mail",
+    "role": "Rôle",
+    "status": "État",
+    "documents": "Documents",
+    "created": "Créé le",
+    "roles": {
+      "ADMIN": "Administrateur",
+      "USER": "Membre"
+    },
+    "states": {
+      "ACTIVE": "Actif",
+      "LOCKED": "Verrouillé"
+    }
   }
 }
