@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/krizaka/kridoc/compare/v0.9.2...v0.10.0) (2026-11-16)
+
+
+### Features
+
+* **account:** the client space and the admin users list, with a journey ([#67](https://github.com/krizaka/kridoc/issues/67)) ([1494f78](https://github.com/krizaka/kridoc/commit/1494f78359f71bb15145cec7f11fce8eac6834af))
+
 ## [0.9.2](https://github.com/krizaka/kridoc/compare/v0.9.1...v0.9.2) (2026-11-16)
 
 
