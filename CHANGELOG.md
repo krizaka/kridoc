@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/krizaka/kridoc/compare/v0.10.0...v0.11.0) (2026-11-16)
+
+
+### Features
+
+* **storage-api:** v1.1 first half — Repr-Digest both ways, create-only replay, deletion record ([#4041](https://github.com/krizaka/kridoc/issues/4041)) ([#72](https://github.com/krizaka/kridoc/issues/72)) ([8564446](https://github.com/krizaka/kridoc/commit/85644468217640b9687ab1c05b74f42728c9f99d))
+
 ## [0.10.0](https://github.com/krizaka/kridoc/compare/v0.9.2...v0.10.0) (2026-11-16)
 
 
