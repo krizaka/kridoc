@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { devRedirect } from "./dev-host";
+import { devRedirect, isDevHost } from "./dev-host";
 
 const go = (host: string, path: string, search = "") =>
   devRedirect(host, path, search, "https://www.x.com", "dev.x.com");
@@ -16,5 +16,14 @@ describe("the dev host", () => {
   it("leaves www alone, and does nothing without a dev host", () => {
     expect(go("www.x.com", "/")).toBeNull();
     expect(devRedirect("dev.x.com", "/", "", "https://www.x.com", undefined)).toBeNull();
+  });
+});
+
+describe("isDevHost", () => {
+  it("is true for dev.kridoc.com, with or without a port, false for www", () => {
+    expect(isDevHost("dev.kridoc.com")).toBe(true);
+    expect(isDevHost("dev.kridoc.com:443")).toBe(true);
+    expect(isDevHost("www.kridoc.com")).toBe(false);
+    expect(isDevHost(null)).toBe(false);
   });
 });

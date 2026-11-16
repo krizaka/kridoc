@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const host = vi.hoisted(() => ({ value: "www.kridoc.com" }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ host: host.value }) }));
 
 import { GET } from "@/app/llms.txt/route";
 import { llmsText } from "@/lib/seo";
@@ -23,10 +26,15 @@ import robots from "@/app/robots";
 import { CRAWLERS, pageMetadata, siteJsonLd } from "@/lib/seo";
 
 describe("the family SEO contract", () => {
-  it("robots.txt names every welcomed crawler", () => {
-    const rules = robots().rules;
+  it("robots.txt names every welcomed crawler", async () => {
+    host.value = "www.kridoc.com";
+    const rules = (await robots()).rules;
     const agents = (Array.isArray(rules) ? rules : [rules]).map((r) => r.userAgent);
     for (const bot of CRAWLERS) expect(agents).toContain(bot);
+  });
+  it("robots.txt of the dev host shuts the door", async () => {
+    host.value = "dev.kridoc.com";
+    expect((await robots()).rules).toEqual({ userAgent: "*", disallow: "/" });
   });
   it("every page has a canonical, social cards and a JSON-LD that leads back to Krizaka", () => {
     const meta = pageMetadata("en");
