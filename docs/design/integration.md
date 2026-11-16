@@ -18,6 +18,7 @@ de comportement de `@krizaka/storage`. Elle est **éteinte** (`MEDIA_STORAGE_ENA
 ni app de développement. Il manque donc peu de code et surtout de l'infrastructure.
 
 **Les sept décisions :**
+
 1. **Le contrat :** on garde l'API v1 (des objets, l'app garde ses droits) et on l'enrichit sans rien casser (v1.1) : empreinte
    SHA-256 vérifiée à l'entrée et rendue à la sortie, dépôt « création seule » rejouable sans doublon, reçu de suppression, liste
    paginée, un « ping » qui teste la clé. Les dossiers, versions et droits gérés par Kridoc viendront dans une deuxième API (« Files
