@@ -15,3 +15,10 @@ export function devRedirect(
   if (!devHost || host?.split(":")[0] !== devHost || DEV_OPEN.test(pathname)) return null;
   return `${wwwOrigin}${pathname}${search}`;
 }
+
+/** The development address, an alias of the same app (.do/app.yaml): it serves its pages and is never indexed. */
+// @fixed: the registered dev host of Kridoc (profile/products.json)
+export const DEV_HOST = "dev.kridoc.com";
+
+/** Whether a request's Host header is the development address. */
+export const isDevHost = (host: string | null): boolean => host?.split(":")[0] === DEV_HOST;
