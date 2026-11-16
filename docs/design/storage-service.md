@@ -1,7 +1,7 @@
 # Kridoc's storage service
 
 Status: design, slices 1, 3 and 5 built (krizaka-internal#3719, slice D of #3714; encryption per account krizaka-internal#3754; product API krizaka-internal#3756). Founder: « kridoc are responsable to exopse storages to all
-our apps » (2026-11-14); « chaque produit est indepedant donc il mange ses users » (2026-11-15). Law 25: personal data stays in Canada.
+our apps » (2026-11-14); « chaque produit est indepedant donc il mange ses users » (2026-11-15). Law 25: personal data stays in Canada. How every app connects to this API with its key, through one shared client: [integration.md](integration.md) (krizaka-internal#4036).
 
 ## Résumé (français)
 
