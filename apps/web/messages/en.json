@@ -129,5 +129,48 @@
       "INVALID_SETTING": "A value is outside its limits. Nothing was changed.",
       "INTERNAL": "Something went wrong on our side. Try again later."
     }
+  },
+  "account": {
+    "meta": {
+      "title": "Your account"
+    },
+    "title": "Your account",
+    "signOut": "Sign out",
+    "adminLink": "Administration",
+    "documents": {
+      "title": "Your documents",
+      "empty": "No documents yet",
+      "emptyHint": "The files you keep with Kridoc will appear here.",
+      "table": {
+        "caption": "Your documents",
+        "title": "Title",
+        "type": "Type",
+        "size": "Size",
+        "added": "Added",
+        "kilobytes": "KB"
+      }
+    }
+  },
+  "usersAdmin": {
+    "meta": {
+      "title": "Users"
+    },
+    "title": "Users",
+    "description": "Every account, its role and its status. Accounts are created by an administrator.",
+    "storageLink": "Storage settings",
+    "caption": "Kridoc users",
+    "email": "Email address",
+    "role": "Role",
+    "status": "Status",
+    "documents": "Documents",
+    "created": "Created",
+    "roles": {
+      "ADMIN": "Administrator",
+      "USER": "Member"
+    },
+    "states": {
+      "ACTIVE": "Active",
+      "LOCKED": "Locked"
+    }
   }
 }
