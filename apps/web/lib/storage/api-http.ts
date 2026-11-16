@@ -5,6 +5,7 @@ import { localeOfRequest, problemOf } from "@/lib/auth/http";
 import { getDictionary } from "@/lib/i18n";
 
 import { STORAGE_API_ERROR, STORAGE_API_STATUS, StorageApiError, type StorageApiErrorCode } from "./api-errors";
+import { reprDigestOf } from "./object-digest";
 
 /** The refusals of @krizaka/storage the API can meet, as its own codes. */
 const FROM_STORAGE: Partial<Record<string, StorageApiErrorCode>> = {
@@ -77,15 +78,18 @@ const OBJECT_HEADERS = {
 } as const;
 
 /** An object's bytes as the answer: its stored type, never rendered inline, never cached, never sniffed again by a browser. */
-export const objectResponse = (object: StoredObject): Response =>
+export const objectResponse = (object: StoredObject & { sha256: string }): Response =>
   new Response(object.bytes.slice(), {
     headers: {
       ...OBJECT_HEADERS,
       "Content-Type": object.contentType,
       "Content-Length": String(object.bytes.byteLength),
+      "Repr-Digest": reprDigestOf(object.sha256),
     },
   });
 
 /** An object's size without its bytes (HEAD). */
-export const headResponse = (size: number): Response =>
-  new Response(null, { headers: { ...OBJECT_HEADERS, "Content-Length": String(size) } });
+export const headResponse = (info: { size: number; sha256: string }): Response =>
+  new Response(null, {
+    headers: { ...OBJECT_HEADERS, "Content-Length": String(info.size), "Repr-Digest": reprDigestOf(info.sha256) },
+  });

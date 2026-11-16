@@ -86,6 +86,7 @@ independent place and do not move to Kridoc.
 4. **Admin**: the settings registry, audit lines, retention and the orphan sweep.
 5. **Product API** (built, krizaka-internal#3756): `storage_client` (product, tenant, token hash, scopes; `2026-11-18-storage-clients.sql`),
    `/api/storage/v1/objects/{key}` (PUT, GET, HEAD, DELETE), `/api/storage/v1/objects?prefix=` (list), `/api/storage/v1/links/{key}`
+   v1.1 first half (#4041): digest both ways, create-only replay, deletion record; see the OpenAPI file.
    (POST signs, GET opens), a limiter per client, audit lines. The contract: [the OpenAPI document](../architecture/kridoc-storage-api.v1.openapi.yaml)
    and `objectStoreContract`, run against the routes through the reference client `apps/web/lib/storage/kridoc-api-store.ts`.
    Choices of this slice:

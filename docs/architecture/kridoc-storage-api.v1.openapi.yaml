@@ -22,9 +22,17 @@ info:
 
     **Server to server only.** No CORS. A browser gets at most one signed link to one object, valid a few minutes.
 
+    **v1.1, first half (krizaka-internal#4041; the document stays at 1.0.0 until the rest lands: ping, usage and quota, cursor list,
+    `X-Request-Id`, generated types).** All additive. `PUT` takes `Repr-Digest: sha-256=:<base64>:` (RFC 9530): Kridoc hashes what it
+    received and refuses a mismatch with `400 STORAGE_DIGEST_MISMATCH`, nothing written. `PUT` with `If-None-Match: *` never replaces: the
+    same bytes answer `200` + `Idempotent-Replayed: true`, other bytes `412 STORAGE_OBJECT_EXISTS`. The SHA-256 (hex) is in
+    `StoredObject.sha256` / `ObjectInfo.sha256` and `Repr-Digest` on GET and HEAD (computed from the opened bytes: the sealed store keeps
+    no digest beside them). `DELETE` answers `200` with the deletion record; a missing key `{ key, absent: true }`. The record is
+    written to the audit ledger (hash of the key, record id, digest, size); the dedicated purge ledger of #3499 is not built yet.
+
     **Refusals** are Problem Details (RFC 9457) with a stable `code`: `STORAGE_API_OFF` 404, `STORAGE_UNAUTHENTICATED` 401,
     `STORAGE_SCOPE_REFUSED` 403, `STORAGE_OBJECT_NOT_FOUND` 404, `STORAGE_KEY_REFUSED` 400, `STORAGE_OBJECT_TOO_BIG` 413,
-    `STORAGE_TYPE_REFUSED` 415, `STORAGE_LINK_REFUSED` 403, `STORAGE_INVALID_INPUT` 400, `RATE_LIMITED` 429 (with `Retry-After`),
+    `STORAGE_TYPE_REFUSED` 415, `STORAGE_LINK_REFUSED` 403, `STORAGE_DIGEST_MISMATCH` 400, `STORAGE_OBJECT_EXISTS` 412, `STORAGE_INVALID_INPUT` 400, `RATE_LIMITED` 429 (with `Retry-After`),
     `INTERNAL` 500.
 servers:
   - url: https://www.kridoc.com
@@ -36,7 +44,18 @@ paths:
       - $ref: "#/components/parameters/Key"
     put:
       operationId: putObject
-      summary: Keeps an object (the raw body); an existing key is replaced.
+      summary: Keeps an object (the raw body); an existing key is replaced, unless `If-None-Match` is `*` (create-only).
+      parameters:
+        - name: Repr-Digest
+          in: header
+          required: false
+          description: "`sha-256=:<base64>:` of the body (RFC 9530); a mismatch writes nothing."
+          schema: { type: string }
+        - name: If-None-Match
+          in: header
+          required: false
+          description: "`*`: create-only. The same bytes under the same key are a replay (200); other bytes are 412."
+          schema: { type: string, enum: ["*"] }
       description: |
         The declared `Content-Type` must be one the settings accept (`SETTINGS.storageApi.types`); bytes of a known type (magic number)
         must be that type, and may not hide under `application/octet-stream` (the type of a product's own ciphertext). At most
@@ -49,6 +68,8 @@ paths:
       responses:
         "201":
           description: Kept.
+          headers:
+            Repr-Digest: { schema: { type: string } }
           content:
             application/json:
               schema:
@@ -56,6 +77,19 @@ paths:
                 required: [object]
                 properties:
                   object: { $ref: "#/components/schemas/StoredObject" }
+        "200":
+          description: Create-only replay, the same bytes were already there (`Idempotent-Replayed true`).
+          headers:
+            Idempotent-Replayed: { schema: { type: string, enum: ["true"] } }
+            Repr-Digest: { schema: { type: string } }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [object]
+                properties:
+                  object: { $ref: "#/components/schemas/StoredObject" }
+        "412": { $ref: "#/components/responses/Refusal" }
         "400": { $ref: "#/components/responses/Refusal" }
         "401": { $ref: "#/components/responses/Refusal" }
         "403": { $ref: "#/components/responses/Refusal" }
@@ -82,9 +116,20 @@ paths:
         "404": { description: No such object. }
     delete:
       operationId: deleteObject
-      summary: Deletes the object; deleting a missing one is not an error.
+      summary: Deletes the object and answers its deletion record; deleting a missing one is not an error.
       responses:
-        "204": { description: Gone. }
+        "200":
+          description: "The deletion record, or `{ key, absent: true }` when there was nothing."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/DeletionRecord"
+                  - type: object
+                    required: [key, absent]
+                    properties:
+                      key: { type: string }
+                      absent: { type: boolean, enum: [true] }
         "401": { $ref: "#/components/responses/Refusal" }
         "403": { $ref: "#/components/responses/Refusal" }
   /api/storage/v1/objects:
@@ -176,6 +221,7 @@ components:
       properties:
         key: { type: string }
         size: { type: integer }
+        sha256: { type: string, description: "Hex SHA-256 of the object (v1.1; absent in a list)." }
     StoredObject:
       type: object
       required: [key, size, contentType]
@@ -183,6 +229,16 @@ components:
         key: { type: string }
         size: { type: integer }
         contentType: { type: string }
+        sha256: { type: string, description: "Hex SHA-256 of the bytes received (v1.1)." }
+    DeletionRecord:
+      type: object
+      required: [key, deletedAt, sha256, size, recordId]
+      properties:
+        key: { type: string }
+        deletedAt: { type: string, format: date-time }
+        sha256: { type: string }
+        size: { type: integer }
+        recordId: { type: string, description: "`del_` + 24 hex, derived from tenant, key, time and digest." }
   responses:
     Refusal:
       description: A refusal (Problem Details).
@@ -206,6 +262,8 @@ components:
                   - STORAGE_OBJECT_TOO_BIG
                   - STORAGE_TYPE_REFUSED
                   - STORAGE_LINK_REFUSED
+                  - STORAGE_DIGEST_MISMATCH
+                  - STORAGE_OBJECT_EXISTS
                   - STORAGE_INVALID_INPUT
                   - RATE_LIMITED
                   - INTERNAL

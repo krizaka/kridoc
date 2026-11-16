@@ -50,7 +50,11 @@ describe("the storage API's HTTP edge", () => {
   });
 
   it("serves an object as an attachment that is never sniffed, rendered or cached", () => {
-    const response = objectResponse({ bytes: new Uint8Array([1, 2]), contentType: "application/pdf" });
+    const response = objectResponse({
+      bytes: new Uint8Array([1, 2]),
+      contentType: "application/pdf",
+      sha256: "0".repeat(64),
+    });
     expect(Object.fromEntries(response.headers)).toMatchObject({
       "content-type": "application/pdf",
       "content-length": "2",

@@ -12,6 +12,7 @@ import {
 
 import { STORAGE_API_ERROR, StorageApiError } from "./api-errors";
 import { STORAGE_SCOPE, type StorageClient, type StorageScope } from "./client-port";
+import { sha256Of } from "./object-digest";
 import type { LinkClaim, SignedLinks } from "./signed-links";
 import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
 import type { StorageClients } from "./storage-clients";
@@ -47,23 +48,37 @@ export interface LinkQuery {
   signature: string;
 }
 
+export interface PutOptions {
+  sha256?: string;
+  createOnly?: boolean;
+}
+
+/** What a deletion leaves: the proof of what was removed (also written to the audit ledger, by hash of the key). */
+export type DeletionRecord =
+  { key: string; absent: true } | { key: string; deletedAt: string; sha256: string; size: number; recordId: string };
+
 export interface StorageApi {
   /** The client of a token, counted by the limiter. @throws StorageApiError `STORAGE_UNAUTHENTICATED`, RateLimited */
   authenticate(token: string | undefined): Promise<StorageClient>;
+  /**
+   * `options.sha256`: the digest the client declares; the bytes received are hashed and a mismatch writes nothing (`STORAGE_DIGEST_MISMATCH`).
+   * `options.createOnly`: the key is never replaced: the same digest is a replay (`replayed`), another is `STORAGE_OBJECT_EXISTS`.
+   */
   put(
     client: StorageClient,
     key: string,
     bytes: Uint8Array,
     declaredType: string,
-  ): Promise<ObjectInfo & { contentType: string }>;
-  get(client: StorageClient, key: string): Promise<StoredObject>;
-  head(client: StorageClient, key: string): Promise<ObjectInfo>;
-  /** Idempotent: deleting a missing object is not an error. */
-  remove(client: StorageClient, key: string): Promise<void>;
+    options?: PutOptions,
+  ): Promise<ObjectInfo & { contentType: string; sha256: string; replayed: boolean }>;
+  get(client: StorageClient, key: string): Promise<StoredObject & { sha256: string }>;
+  head(client: StorageClient, key: string): Promise<ObjectInfo & { sha256: string }>;
+  /** Idempotent: deleting a missing object is not an error; it answers the deletion record, or `absent`. */
+  remove(client: StorageClient, key: string): Promise<DeletionRecord>;
   list(client: StorageClient, prefix: string): Promise<{ objects: ObjectInfo[]; truncated: boolean }>;
   sign(client: StorageClient, key: string, ttlSeconds?: number): Promise<{ query: LinkQuery; expiresAt: Date }>;
   /** The object a signed link opens, while it lives and its client is not revoked. @throws StorageApiError `STORAGE_LINK_REFUSED` */
-  readLink(query: LinkQuery): Promise<StoredObject>;
+  readLink(query: LinkQuery): Promise<StoredObject & { sha256: string }>;
 }
 
 // @fixed: a key's length bound, far above any product's layout and below every provider's limit
@@ -106,15 +121,37 @@ function need(client: StorageClient, scope: StorageScope): void {
   if (!client.scopes.includes(scope)) throw refused(STORAGE_API_ERROR.scopeRefused);
 }
 
-/** An object, or « not found » when it is missing or can never open again (its tenant's key was shredded). */
-async function found(store: ObjectStore, key: string): Promise<StoredObject> {
+/** An object, or `null` when it is missing or can never open again (its tenant's key was shredded). */
+async function maybe(store: ObjectStore, key: string): Promise<StoredObject | null> {
   try {
-    const object = await store.get(key);
-    if (object) return object;
+    return await store.get(key);
   } catch (error) {
-    if (!(error instanceof StorageError && error.code === STORAGE_CODE.shredded)) throw error;
+    if (error instanceof StorageError && error.code === STORAGE_CODE.shredded) return null;
+    throw error;
   }
-  throw refused(STORAGE_API_ERROR.notFound);
+}
+
+/** An object, or « not found ». */
+async function found(store: ObjectStore, key: string): Promise<StoredObject> {
+  const object = await maybe(store, key);
+  if (!object) throw refused(STORAGE_API_ERROR.notFound);
+  return object;
+}
+
+/** Whether a create-only write is a replay: the key holds these very bytes. @throws StorageApiError `STORAGE_OBJECT_EXISTS` when it holds others */
+async function createdAlready(store: ObjectStore, key: string, sha256: string): Promise<boolean> {
+  const existing = await maybe(store, key);
+  if (!existing) return false;
+  if (sha256Of(existing.bytes) !== sha256) throw refused(STORAGE_API_ERROR.objectExists);
+  return true;
+}
+
+/** The record of a deletion; its id is derived from what it says, so the same deletion is the same record. */
+function deletionRecordOf(client: StorageClient, key: string, bytes: Uint8Array, at: Date) {
+  const sha256 = sha256Of(bytes);
+  const deletedAt = at.toISOString();
+  const recordId = `del_${sha256Of(new TextEncoder().encode([client.tenantId, key, deletedAt, sha256].join("\n"))).slice(0, 24)}`;
+  return { key, deletedAt, sha256, size: bytes.byteLength, recordId };
 }
 
 /** The claim of a link whose signature holds and whose time has not passed. */
@@ -168,7 +205,7 @@ function linksOf(deps: StorageApiDeps, acts: ReturnType<typeof actsOf>): Pick<St
       await acts.limited(client);
       const object = await found(acts.storeOf(client), checkedKey(claim.key));
       await acts.note(STORAGE_AUDIT.read, client, claim.key, { via: "link" });
-      return object;
+      return { ...object, sha256: sha256Of(object.bytes) };
     },
   };
 }
@@ -182,31 +219,51 @@ export function createStorageApi(deps: StorageApiDeps): StorageApi {
   const { note, storeOf, limited } = acts;
   return {
     authenticate: async (token) => limited(await deps.clients.authenticate(token)),
-    async put(client, key, bytes, declaredType) {
+    async put(client, key, bytes, declaredType, options = {}) {
       need(client, STORAGE_SCOPE.put);
       const checked = checkedKey(key);
       const contentType = acceptedType(bytes, declaredType, await deps.rules());
+      const sha256 = sha256Of(bytes);
+      if (options.sha256 !== undefined && options.sha256 !== sha256) throw refused(STORAGE_API_ERROR.digestMismatch);
+      const info = { key: checked, size: bytes.byteLength, contentType, sha256 };
+      if (options.createOnly && (await createdAlready(storeOf(client), checked, sha256))) {
+        await note(STORAGE_AUDIT.uploaded, client, checked, { size: bytes.byteLength, replayed: "yes" });
+        return { ...info, replayed: true };
+      }
       await storeOf(client).put(checked, bytes, { contentType });
       await note(STORAGE_AUDIT.uploaded, client, checked, { size: bytes.byteLength });
-      return { key: checked, size: bytes.byteLength, contentType };
+      return { ...info, replayed: false };
     },
     async get(client, key) {
       need(client, STORAGE_SCOPE.get);
       const object = await found(storeOf(client), checkedKey(key));
       await note(STORAGE_AUDIT.read, client, key, { size: object.bytes.byteLength });
-      return object;
+      return { ...object, sha256: sha256Of(object.bytes) };
     },
     async head(client, key) {
       need(client, STORAGE_SCOPE.get);
-      const info = await storeOf(client).head(checkedKey(key));
-      if (!info) throw refused(STORAGE_API_ERROR.notFound);
+      // The digest is of the plaintext, which only the tenant's key opens: it is read, not kept beside the sealed bytes.
+      const object = await found(storeOf(client), checkedKey(key));
       await note(STORAGE_AUDIT.head, client, key);
-      return info;
+      return { key: checkedKey(key), size: object.bytes.byteLength, sha256: sha256Of(object.bytes) };
     },
     async remove(client, key) {
       need(client, STORAGE_SCOPE.delete);
-      await storeOf(client).delete(checkedKey(key));
-      await note(STORAGE_AUDIT.deleted, client, key);
+      const checked = checkedKey(key);
+      const store = storeOf(client);
+      const existing = await maybe(store, checked);
+      await store.delete(checked);
+      if (!existing) {
+        await note(STORAGE_AUDIT.deleted, client, checked, { absent: "yes" });
+        return { key: checked, absent: true };
+      }
+      const record = deletionRecordOf(client, checked, existing.bytes, deps.clock.now());
+      await note(STORAGE_AUDIT.deleted, client, checked, {
+        recordId: record.recordId,
+        sha256: record.sha256,
+        size: record.size,
+      });
+      return record;
     },
     async list(client, prefix) {
       need(client, STORAGE_SCOPE.get);
