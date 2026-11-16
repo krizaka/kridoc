@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Kridoc storage API for Krizaka's products
-  version: 1.0.0
+  version: 1.1.0
   summary: Objects of one product's tenant behind a bearer token, sealed under that tenant's key, data in Canada (krizaka-internal#3756).
   description: |
     The contract of `/api/storage/v1` (slice 5 of krizaka-internal#3719; design in `docs/design/storage-service.md`). **Built**: the
@@ -22,17 +22,25 @@ info:
 
     **Server to server only.** No CORS. A browser gets at most one signed link to one object, valid a few minutes.
 
-    **v1.1, first half (krizaka-internal#4041; the document stays at 1.0.0 until the rest lands: ping, usage and quota, cursor list,
-    `X-Request-Id`, generated types).** All additive. `PUT` takes `Repr-Digest: sha-256=:<base64>:` (RFC 9530): Kridoc hashes what it
+    **v1.1 (krizaka-internal#4041).** All additive: nothing a v1.0 client relies on changed. `PUT` takes `Repr-Digest: sha-256=:<base64>:` (RFC 9530): Kridoc hashes what it
     received and refuses a mismatch with `400 STORAGE_DIGEST_MISMATCH`, nothing written. `PUT` with `If-None-Match: *` never replaces: the
     same bytes answer `200` + `Idempotent-Replayed: true`, other bytes `412 STORAGE_OBJECT_EXISTS`. The SHA-256 (hex) is in
     `StoredObject.sha256` / `ObjectInfo.sha256` and `Repr-Digest` on GET and HEAD (computed from the opened bytes: the sealed store keeps
     no digest beside them). `DELETE` answers `200` with the deletion record; a missing key `{ key, absent: true }`. The record is
     written to the audit ledger (hash of the key, record id, digest, size); the dedicated purge ledger of #3499 is not built yet.
+    **List** takes `after` (the last key seen) and `limit` and answers `{ objects, next, truncated }`: `next` is the `after` of the next page,
+    `null` on the last. `GET /ping` tells the tenant, the scopes, the key's expiry (`null`: keys are revoked, they do not expire) and the
+    API's version; `GET /usage` tells `{ bytes, objects, quota }`. The **quota** (bytes and objects per tenant) is a setting of Kridoc's
+    storage admin: a write past it is refused before any byte is kept, `403 STORAGE_QUOTA_EXCEEDED` (a create-only replay writes nothing
+    and is still answered; bytes are what the store holds, sealing included). **`X-Request-Id`** is on every answer: the caller's, when it
+    is 1 to 128 characters of letters, digits, `.`, `_` or `-`, else a generated one; a refusal repeats it in its `instance`
+    (`urn:kridoc:request:<id>`). **Create-only is atomic** inside one Kridoc instance: of two concurrent writes of one key with different
+    bytes exactly one wins and the other is `412`. TypeScript types of this document are generated
+    (`apps/web/lib/storage/generated/storage-api.d.ts`) and a test fails when they drift.
 
     **Refusals** are Problem Details (RFC 9457) with a stable `code`: `STORAGE_API_OFF` 404, `STORAGE_UNAUTHENTICATED` 401,
     `STORAGE_SCOPE_REFUSED` 403, `STORAGE_OBJECT_NOT_FOUND` 404, `STORAGE_KEY_REFUSED` 400, `STORAGE_OBJECT_TOO_BIG` 413,
-    `STORAGE_TYPE_REFUSED` 415, `STORAGE_LINK_REFUSED` 403, `STORAGE_DIGEST_MISMATCH` 400, `STORAGE_OBJECT_EXISTS` 412, `STORAGE_INVALID_INPUT` 400, `RATE_LIMITED` 429 (with `Retry-After`),
+    `STORAGE_TYPE_REFUSED` 415, `STORAGE_LINK_REFUSED` 403, `STORAGE_DIGEST_MISMATCH` 400, `STORAGE_OBJECT_EXISTS` 412, `STORAGE_QUOTA_EXCEEDED` 403, `STORAGE_INVALID_INPUT` 400, `RATE_LIMITED` 429 (with `Retry-After`),
     `INTERNAL` 500.
 servers:
   - url: https://www.kridoc.com
@@ -135,12 +143,22 @@ paths:
   /api/storage/v1/objects:
     get:
       operationId: listObjects
-      summary: The tenant's objects whose key starts with `prefix`, in key order, at most `SETTINGS.storageApi.listMax`.
+      summary: The tenant's objects whose key starts with `prefix`, in key order, one page at a time (at most `SETTINGS.storageApi.listMax`).
       parameters:
         - name: prefix
           in: query
           required: false
           schema: { type: string, default: "" }
+        - name: after
+          in: query
+          required: false
+          description: The last key of the page before (exclusive); omit for the first page.
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          description: "The page size, a whole number from 1; capped by the settings' bound (default: the bound)."
+          schema: { type: integer, minimum: 1 }
       responses:
         "200":
           description: The objects.
@@ -148,14 +166,65 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [objects, truncated]
+                required: [objects, next, truncated]
                 properties:
                   objects:
                     type: array
                     items: { $ref: "#/components/schemas/ObjectInfo" }
-                  truncated: { type: boolean }
+                  next:
+                    type: [string, "null"]
+                    description: The `after` of the next page; `null` on the last page.
+                  truncated: { type: boolean, description: "True when there is a next page." }
         "400": { $ref: "#/components/responses/Refusal" }
         "401": { $ref: "#/components/responses/Refusal" }
+  /api/storage/v1/ping:
+    get:
+      operationId: ping
+      summary: Who the token is. Any authenticated client may ask.
+      responses:
+        "200":
+          description: The client's tenant, scopes, key expiry and the API's version.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tenant, scopes, keyExpiresAt, api]
+                properties:
+                  tenant: { type: string }
+                  scopes:
+                    type: array
+                    items: { type: string, enum: [put, get, delete, sign] }
+                  keyExpiresAt:
+                    type: [string, "null"]
+                    format: date-time
+                    description: "`null` while keys do not expire (they are revoked)."
+                  api: { type: string, description: "The contract's version, `info.version`." }
+        "401": { $ref: "#/components/responses/Refusal" }
+        "429": { $ref: "#/components/responses/Refusal" }
+  /api/storage/v1/usage:
+    get:
+      operationId: usage
+      summary: What the tenant keeps and what it may keep (scope `get`).
+      responses:
+        "200":
+          description: Bytes and objects kept, and the quota of the storage settings.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [bytes, objects, quota]
+                properties:
+                  bytes: { type: integer, description: "What the store holds for the tenant, sealing included." }
+                  objects: { type: integer }
+                  quota:
+                    type: object
+                    required: [bytes, objects]
+                    properties:
+                      bytes: { type: integer }
+                      objects: { type: integer }
+        "401": { $ref: "#/components/responses/Refusal" }
+        "403": { $ref: "#/components/responses/Refusal" }
+        "429": { $ref: "#/components/responses/Refusal" }
   /api/storage/v1/links/{key}:
     parameters:
       - $ref: "#/components/parameters/Key"
@@ -248,6 +317,7 @@ components:
             type: object
             required: [type, title, status, code, detail]
             properties:
+              instance: { type: string, description: "`urn:kridoc:request:` + the answer's `X-Request-Id`." }
               type: { type: string }
               title: { type: string }
               status: { type: integer }
@@ -264,6 +334,7 @@ components:
                   - STORAGE_LINK_REFUSED
                   - STORAGE_DIGEST_MISMATCH
                   - STORAGE_OBJECT_EXISTS
+                  - STORAGE_QUOTA_EXCEEDED
                   - STORAGE_INVALID_INPUT
                   - RATE_LIMITED
                   - INTERNAL

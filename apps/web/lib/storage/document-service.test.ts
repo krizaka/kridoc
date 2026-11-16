@@ -24,6 +24,8 @@ const RULES: StorageRules = {
   types: ["application/pdf", "image/png", "image/jpeg", "image/webp"],
   signedUrlSeconds: 300,
   retentionDays: 365,
+  quotaBytes: 1_000_000,
+  quotaObjects: 1000,
 };
 
 /** The metadata port in memory, with the same owner rule as the SQL adapter (lib/db/document-store.ts, tested on PostgreSQL). */

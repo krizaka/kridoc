@@ -40,9 +40,10 @@ export function problemOf(
   status: number,
   detail: string,
   headers: Record<string, string> = {},
+  instance?: string,
 ): Response {
   return jsonOf(
-    { type: "about:blank", title: code, status, code, detail },
+    { type: "about:blank", title: code, status, code, detail, ...(instance ? { instance } : {}) },
     { status, headers: { "Content-Type": "application/problem+json", ...headers } },
   );
 }

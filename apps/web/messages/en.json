@@ -81,6 +81,7 @@
       "STORAGE_LINK_REFUSED": "This link is not valid or has expired.",
       "STORAGE_DIGEST_MISMATCH": "The content does not match its declared digest. Nothing was stored.",
       "STORAGE_OBJECT_EXISTS": "An object with this key already exists with other content.",
+      "STORAGE_QUOTA_EXCEEDED": "This storage space is full: the quota of bytes or objects is reached. Nothing was stored.",
       "STORAGE_INVALID_INPUT": "The request is not valid.",
       "RATE_LIMITED": "Too many requests. Try again later.",
       "INTERNAL": "Something went wrong on our side. Try again later."
@@ -103,6 +104,14 @@
     "retentionDays": {
       "label": "Retention (days)",
       "hint": "Documents older than this are removed by the retention job. Between {min} and {max} days."
+    },
+    "quotaMb": {
+      "label": "Quota per product space (MB)",
+      "hint": "The most one product's tenant may keep. Between {min} and {max} MB."
+    },
+    "quotaObjects": {
+      "label": "Objects per product space",
+      "hint": "The most objects one product's tenant may keep. Between {min} and {max}."
     },
     "types": {
       "legend": "Accepted content types",

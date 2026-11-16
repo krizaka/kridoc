@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { GET as readLink, POST as signLink } from "./v1/links/[...key]/route";
 import { DELETE as deleteOne, GET as readOne, HEAD as headOne, PUT as putOne } from "./v1/objects/[...key]/route";
 import { GET as listObjects } from "./v1/objects/route";
+import { GET as ping } from "./v1/ping/route";
+import { GET as usage } from "./v1/usage/route";
 
 const BASE = "https://www.kridoc.com/api/storage/v1";
 const params = { params: Promise.resolve({ key: ["docs", "a.pdf"] }) };
@@ -22,6 +24,8 @@ describe("the storage API routes while MEDIA_STORAGE_ENABLED is off (the default
       () => deleteOne(new Request(`${BASE}/objects/docs/a.pdf`, { method: "DELETE", headers: TOKEN }), params),
     ],
     ["list", () => listObjects(new Request(`${BASE}/objects`, { headers: TOKEN }))],
+    ["ping", () => ping(new Request(`${BASE}/ping`, { headers: TOKEN }))],
+    ["usage", () => usage(new Request(`${BASE}/usage`, { headers: TOKEN }))],
     ["sign", () => signLink(new Request(`${BASE}/links/docs/a.pdf`, { method: "POST", headers: TOKEN }), params)],
     ["read a link", () => readLink(new Request(`${BASE}/links/docs/a.pdf?client=x&expires=1&signature=y`), params)],
   ] as const) {
@@ -29,6 +33,7 @@ describe("the storage API routes while MEDIA_STORAGE_ENABLED is off (the default
       const response = await call();
       expect(response.status).toBe(404);
       expect((await response.json()).code).toBe("STORAGE_API_OFF");
+      expect(response.headers.get("x-request-id")).toMatch(/^[\w.-]{1,128}$/);
     });
   }
 });

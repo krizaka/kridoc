@@ -30,6 +30,8 @@ const DEFAULT_RULES: StorageRules = {
   types: ["application/pdf", "image/png", "application/octet-stream"],
   signedUrlSeconds: 300,
   retentionDays: 365,
+  quotaBytes: 10_000,
+  quotaObjects: 100,
 };
 let rules: StorageRules = DEFAULT_RULES;
 
@@ -215,6 +217,115 @@ describe("the storage API for products (krizaka-internal#3756)", () => {
         lines.every((l) => l.actor.id === client.id && l.actor.kind === "client" && l.tenantId === "verikora-prod"),
       ).toBe(true);
       expect(JSON.stringify(audit)).not.toContain("secret-name");
+    });
+  });
+
+  describe("v1.1 second half: pages, ping, usage, quota, atomic create-only (krizaka-internal#4041)", () => {
+    const putMany = async (client: Awaited<ReturnType<typeof issue>>["client"], keys: string[]) => {
+      for (const key of keys) await api.put(client, key, PDF, "application/pdf");
+    };
+
+    it("lists in pages: `after` is the last key seen, `next` is null on the last page, `truncated` is kept", async () => {
+      const { client } = await issue();
+      await putMany(client, ["p/a.pdf", "p/b.pdf", "p/c.pdf", "p/d.pdf", "p/e.pdf"]);
+      const first = await api.list(client, "p/", { limit: 2 });
+      expect(first.objects.map((o) => o.key)).toEqual(["p/a.pdf", "p/b.pdf"]);
+      expect(first).toMatchObject({ next: "p/b.pdf", truncated: true });
+      const second = await api.list(client, "p/", { limit: 2, after: first.next! });
+      expect(second.objects.map((o) => o.key)).toEqual(["p/c.pdf", "p/d.pdf"]);
+      const last = await api.list(client, "p/", { limit: 2, after: second.next! });
+      expect(last.objects.map((o) => o.key)).toEqual(["p/e.pdf"]);
+      expect(last).toMatchObject({ next: null, truncated: false });
+      // no limit: the settings' bound; a limit above it is capped
+      expect((await api.list(client, "p/", { limit: 10_000 })).objects).toHaveLength(5);
+    });
+
+    it("refuses a limit that is not a positive whole number, and an `after` that is not a key", async () => {
+      const { client } = await issue();
+      for (const limit of [0, -1, 1.5, Number.NaN])
+        await expect(api.list(client, "", { limit })).rejects.toMatchObject({ code: STORAGE_API_ERROR.invalidInput });
+      await expect(api.list(client, "", { after: "../x" })).rejects.toMatchObject({
+        code: STORAGE_API_ERROR.keyRefused,
+      });
+    });
+
+    it("ping tells the tenant, the scopes, the key's expiry (none yet) and the API version", async () => {
+      const { client } = await issue("verikora-prod", ["get"]);
+      expect(api.ping(client)).toEqual({
+        tenant: "verikora-prod",
+        scopes: ["get"],
+        keyExpiresAt: null,
+        api: "1.1.0",
+      });
+    });
+
+    it("usage counts the tenant's bytes and objects and says the quota (the settings', never a constant)", async () => {
+      const { client } = await issue();
+      const other = (await issue("verikora-dev")).client;
+      await putMany(client, ["u/a.pdf", "u/b.pdf"]);
+      await putMany(other, ["u/c.pdf"]);
+      // the bytes are what the store holds for the tenant (sealed: what `list` reports as sizes)
+      const held = (await api.list(client, "")).objects.reduce((sum, o) => sum + o.size, 0);
+      expect(held).toBeGreaterThanOrEqual(2 * PDF.byteLength);
+      expect(await api.usage(client)).toEqual({
+        bytes: held,
+        objects: 2,
+        quota: { bytes: 10_000, objects: 100 },
+      });
+      rules = { ...rules, quotaBytes: 777, quotaObjects: 5 };
+      expect((await api.usage(client)).quota).toEqual({ bytes: 777, objects: 5 });
+    });
+
+    it("refuses a write past the object quota before any byte is kept; replacing a key is not a new object", async () => {
+      rules = { ...rules, quotaObjects: 2 };
+      const { client } = await issue();
+      await putMany(client, ["q/a.pdf", "q/b.pdf"]);
+      const before = await inner.list("");
+      await expect(api.put(client, "q/c.pdf", PDF, "application/pdf")).rejects.toMatchObject({
+        code: STORAGE_API_ERROR.quotaExceeded,
+      });
+      expect(await inner.list("")).toEqual(before);
+      await expect(api.put(client, "q/a.pdf", PDF, "application/pdf")).resolves.toMatchObject({ key: "q/a.pdf" });
+    });
+
+    it("refuses a write past the byte quota (replacing counts only the difference), and another tenant is not counted", async () => {
+      const { client } = await issue();
+      await putMany(client, ["q/a.pdf", "q/b.pdf"]);
+      const held = (await api.usage(client)).bytes;
+      rules = { ...rules, quotaBytes: held };
+      await putMany((await issue("verikora-dev")).client, ["z/a.pdf"]);
+      await expect(api.put(client, "q/c.pdf", PDF, "application/pdf")).rejects.toMatchObject({
+        code: STORAGE_API_ERROR.quotaExceeded,
+      });
+      await expect(api.put(client, "q/a.pdf", PDF, "application/pdf")).resolves.toBeDefined();
+    });
+
+    it("a create-only replay is answered even when the tenant is at its quota (nothing is written)", async () => {
+      rules = { ...rules, quotaObjects: 1 };
+      const { client } = await issue();
+      await api.put(client, "r/a.pdf", PDF, "application/pdf", { createOnly: true });
+      await expect(api.put(client, "r/a.pdf", PDF, "application/pdf", { createOnly: true })).resolves.toMatchObject({
+        replayed: true,
+      });
+    });
+
+    it("create-only is atomic: two concurrent writes of one key with different bytes, exactly one wins and the other is 412", async () => {
+      const { client } = await issue();
+      for (let round = 0; round < 20; round++) {
+        const key = `race/${round}.bin`;
+        const a = new Uint8Array([1, 2, 3, round]);
+        const b = new Uint8Array([4, 5, 6, round]);
+        const outcomes = await Promise.allSettled([
+          api.put(client, key, a, "application/octet-stream", { createOnly: true }),
+          api.put(client, key, b, "application/octet-stream", { createOnly: true }),
+        ]);
+        const won = outcomes.filter((o) => o.status === "fulfilled");
+        const lost = outcomes.filter((o) => o.status === "rejected");
+        expect(won, `round ${round}`).toHaveLength(1);
+        expect(lost[0]).toMatchObject({ reason: { code: STORAGE_API_ERROR.objectExists } });
+        const kept = await api.get(client, key);
+        expect([...kept.bytes]).toEqual([...(outcomes[0]!.status === "fulfilled" ? a : b)]);
+      }
     });
   });
 

@@ -9,7 +9,7 @@ const config = [
   // The Sonar code rules (the whole eslint-plugin-sonarjs recommended set, cognitive complexity 15) fail the lint: SonarCloud
   // analyses public repositories only, so the same rules run here, in CI, with nothing recorded as debt.
   ...krizakaStack({ complexity: "error", sonar: "error", codeRules: "off" }),
-  { ignores: [".next/**", "next-env.d.ts"] },
+  { ignores: [".next/**", "next-env.d.ts", "lib/storage/generated/**"] },
 ];
 
 export default config;

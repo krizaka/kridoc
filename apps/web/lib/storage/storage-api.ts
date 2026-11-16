@@ -17,7 +17,11 @@ import type { LinkClaim, SignedLinks } from "./signed-links";
 import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
 import type { StorageClients } from "./storage-clients";
 import type { StorageRules, StorageRulesSource } from "./storage-settings";
+import { tenantWriteLock } from "./tenant-write-lock";
 
+/** The version of this contract (the OpenAPI document's `info.version`), told by `GET /ping`. */
+// @fixed: the contract's own version, bumped with docs/architecture/kridoc-storage-api.v1.openapi.yaml
+export const STORAGE_API_VERSION = "1.1.0";
 /** The limiter's action of every API call, counted per client (`perSubject`, the client's id). */
 export const STORAGE_API_ACTION = "storage.api";
 
@@ -48,6 +52,33 @@ export interface LinkQuery {
   signature: string;
 }
 
+/** One page of a list: `after` is the last key of the page before; `limit` is capped by the settings' bound. */
+export interface ListPage {
+  after?: string;
+  limit?: number;
+}
+
+export interface ListAnswer {
+  objects: ObjectInfo[];
+  /** The key to pass as `after` for the next page, or `null` on the last page. */
+  next: string | null;
+  truncated: boolean;
+}
+
+export interface PingAnswer {
+  tenant: string;
+  scopes: readonly StorageScope[];
+  /** When the client's key stops working; `null` while keys do not expire (they are revoked). */
+  keyExpiresAt: string | null;
+  api: string;
+}
+
+export interface UsageAnswer {
+  bytes: number;
+  objects: number;
+  quota: { bytes: number; objects: number };
+}
+
 export interface PutOptions {
   sha256?: string;
   createOnly?: boolean;
@@ -62,7 +93,9 @@ export interface StorageApi {
   authenticate(token: string | undefined): Promise<StorageClient>;
   /**
    * `options.sha256`: the digest the client declares; the bytes received are hashed and a mismatch writes nothing (`STORAGE_DIGEST_MISMATCH`).
-   * `options.createOnly`: the key is never replaced: the same digest is a replay (`replayed`), another is `STORAGE_OBJECT_EXISTS`.
+   * `options.createOnly`: the key is never replaced: the same digest is a replay (`replayed`), another is `STORAGE_OBJECT_EXISTS`; the
+   * check and the write are one turn of the tenant's write lock, so two concurrent writes cannot both win.
+   * A write past the tenant's quota (bytes or objects) is refused before anything is stored: `STORAGE_QUOTA_EXCEEDED`.
    */
   put(
     client: StorageClient,
@@ -75,7 +108,12 @@ export interface StorageApi {
   head(client: StorageClient, key: string): Promise<ObjectInfo & { sha256: string }>;
   /** Idempotent: deleting a missing object is not an error; it answers the deletion record, or `absent`. */
   remove(client: StorageClient, key: string): Promise<DeletionRecord>;
-  list(client: StorageClient, prefix: string): Promise<{ objects: ObjectInfo[]; truncated: boolean }>;
+  /** The tenant's objects under `prefix`, in key order, one page at a time. @throws StorageApiError `STORAGE_INVALID_INPUT` (a bad limit) */
+  list(client: StorageClient, prefix: string, page?: ListPage): Promise<ListAnswer>;
+  /** Who the token is: any authenticated client may ask. */
+  ping(client: StorageClient): PingAnswer;
+  /** What the tenant keeps and what it may keep. */
+  usage(client: StorageClient): Promise<UsageAnswer>;
   sign(client: StorageClient, key: string, ttlSeconds?: number): Promise<{ query: LinkQuery; expiresAt: Date }>;
   /** The object a signed link opens, while it lives and its client is not revoked. @throws StorageApiError `STORAGE_LINK_REFUSED` */
   readLink(query: LinkQuery): Promise<StoredObject & { sha256: string }>;
@@ -146,6 +184,30 @@ async function createdAlready(store: ObjectStore, key: string, sha256: string): 
   return true;
 }
 
+const byKey = (a: ObjectInfo, b: ObjectInfo) => Number(a.key > b.key) - Number(a.key < b.key);
+
+/** The page size asked, within the settings' bound. @throws StorageApiError `STORAGE_INVALID_INPUT` */
+function pageSize(limit: number | undefined, max: number): number {
+  if (limit === undefined) return max;
+  if (!Number.isInteger(limit) || limit < 1) throw refused(STORAGE_API_ERROR.invalidInput);
+  return Math.min(limit, max);
+}
+
+/** What a tenant keeps now: its objects and their bytes. */
+async function keptBy(store: ObjectStore): Promise<{ objects: ObjectInfo[]; bytes: number }> {
+  const objects = await store.list("");
+  return { objects, bytes: objects.reduce((sum, o) => sum + o.size, 0) };
+}
+
+/** Refuses a write that would take the tenant past its quota; a replaced key counts only for what it adds. @throws StorageApiError `STORAGE_QUOTA_EXCEEDED` */
+async function assertRoom(store: ObjectStore, key: string, size: number, rules: StorageRules): Promise<void> {
+  const kept = await keptBy(store);
+  const replaced = kept.objects.find((o) => o.key === key);
+  const bytes = kept.bytes - (replaced?.size ?? 0) + size;
+  const objects = kept.objects.length + (replaced ? 0 : 1);
+  if (bytes > rules.quotaBytes || objects > rules.quotaObjects) throw refused(STORAGE_API_ERROR.quotaExceeded);
+}
+
 /** The record of a deletion; its id is derived from what it says, so the same deletion is the same record. */
 function deletionRecordOf(client: StorageClient, key: string, bytes: Uint8Array, at: Date) {
   const sha256 = sha256Of(bytes);
@@ -210,6 +272,68 @@ function linksOf(deps: StorageApiDeps, acts: ReturnType<typeof actsOf>): Pick<St
   };
 }
 
+/** The write: type and size judged, digest checked, then create-only and the quota in one turn of the tenant's write lock. */
+function putOf(deps: StorageApiDeps, acts: ReturnType<typeof actsOf>): StorageApi["put"] {
+  const { note, storeOf } = acts;
+  const writes = tenantWriteLock();
+  return async (client, key, bytes, declaredType, options = {}) => {
+    need(client, STORAGE_SCOPE.put);
+    const checked = checkedKey(key);
+    const quota = await deps.rules();
+    const contentType = acceptedType(bytes, declaredType, quota);
+    const sha256 = sha256Of(bytes);
+    if (options.sha256 !== undefined && options.sha256 !== sha256) throw refused(STORAGE_API_ERROR.digestMismatch);
+    const info = { key: checked, size: bytes.byteLength, contentType, sha256 };
+    const store = storeOf(client);
+    return writes.run(client.tenantId, async () => {
+      if (options.createOnly && (await createdAlready(store, checked, sha256))) {
+        await note(STORAGE_AUDIT.uploaded, client, checked, { size: bytes.byteLength, replayed: "yes" });
+        return { ...info, replayed: true };
+      }
+      await assertRoom(store, checked, bytes.byteLength, quota);
+      await store.put(checked, bytes, { contentType });
+      await note(STORAGE_AUDIT.uploaded, client, checked, { size: bytes.byteLength });
+      return { ...info, replayed: false };
+    });
+  };
+}
+
+/** What a client reads about its tenant as a whole: a page of its objects, who it is, what it keeps. */
+function listingsOf(
+  deps: StorageApiDeps,
+  acts: ReturnType<typeof actsOf>,
+): Pick<StorageApi, "list" | "ping" | "usage"> {
+  const { note, storeOf } = acts;
+  return {
+    async list(client, prefix, page = {}) {
+      need(client, STORAGE_SCOPE.get);
+      const size = pageSize(page.limit, deps.limits.listMax);
+      const after = page.after === undefined ? undefined : checkedKey(page.after);
+      const all = (await storeOf(client).list(checkedPrefix(prefix))).sort(byKey);
+      const rest = after === undefined ? all : all.filter((o) => o.key > after);
+      const objects = rest.slice(0, size);
+      const more = rest.length > size;
+      await note(STORAGE_AUDIT.listed, client, undefined, { count: objects.length });
+      return { objects, next: more ? objects[objects.length - 1]!.key : null, truncated: more };
+    },
+    ping: (client) => ({
+      tenant: client.tenantId,
+      scopes: client.scopes,
+      keyExpiresAt: null,
+      api: STORAGE_API_VERSION,
+    }),
+    async usage(client) {
+      need(client, STORAGE_SCOPE.get);
+      const [kept, rules] = await Promise.all([keptBy(storeOf(client)), deps.rules()]);
+      return {
+        bytes: kept.bytes,
+        objects: kept.objects.length,
+        quota: { bytes: rules.quotaBytes, objects: rules.quotaObjects },
+      };
+    },
+  };
+}
+
 /**
  * The storage API of Krizaka's other products: each client reaches only its own tenant, the one its token names (never a value of the
  * request), every object sealed under that tenant's key. Ports in, typed `StorageApiError` out, one audit line per act.
@@ -219,21 +343,7 @@ export function createStorageApi(deps: StorageApiDeps): StorageApi {
   const { note, storeOf, limited } = acts;
   return {
     authenticate: async (token) => limited(await deps.clients.authenticate(token)),
-    async put(client, key, bytes, declaredType, options = {}) {
-      need(client, STORAGE_SCOPE.put);
-      const checked = checkedKey(key);
-      const contentType = acceptedType(bytes, declaredType, await deps.rules());
-      const sha256 = sha256Of(bytes);
-      if (options.sha256 !== undefined && options.sha256 !== sha256) throw refused(STORAGE_API_ERROR.digestMismatch);
-      const info = { key: checked, size: bytes.byteLength, contentType, sha256 };
-      if (options.createOnly && (await createdAlready(storeOf(client), checked, sha256))) {
-        await note(STORAGE_AUDIT.uploaded, client, checked, { size: bytes.byteLength, replayed: "yes" });
-        return { ...info, replayed: true };
-      }
-      await storeOf(client).put(checked, bytes, { contentType });
-      await note(STORAGE_AUDIT.uploaded, client, checked, { size: bytes.byteLength });
-      return { ...info, replayed: false };
-    },
+    put: putOf(deps, acts),
     async get(client, key) {
       need(client, STORAGE_SCOPE.get);
       const object = await found(storeOf(client), checkedKey(key));
@@ -265,12 +375,7 @@ export function createStorageApi(deps: StorageApiDeps): StorageApi {
       });
       return record;
     },
-    async list(client, prefix) {
-      need(client, STORAGE_SCOPE.get);
-      const all = await storeOf(client).list(checkedPrefix(prefix));
-      await note(STORAGE_AUDIT.listed, client, undefined, { count: all.length });
-      return { objects: all.slice(0, deps.limits.listMax), truncated: all.length > deps.limits.listMax };
-    },
+    ...listingsOf(deps, acts),
     ...linksOf(deps, acts),
   };
 }

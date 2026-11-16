@@ -19,6 +19,8 @@ import { storageApiRuntime } from "../../storage-api-edge";
 import { GET as readLink, POST as signLink } from "./v1/links/[...key]/route";
 import { DELETE as deleteOne, GET as readOne, HEAD as headOne, PUT as putOne } from "./v1/objects/[...key]/route";
 import { GET as listObjects } from "./v1/objects/route";
+import { GET as ping } from "./v1/ping/route";
+import { GET as usage } from "./v1/usage/route";
 
 /**
  * The storage API of the other products through its routes, on a real PostgreSQL (CI's service container; locally a throwaway one,
@@ -40,6 +42,8 @@ const LINK: Record<string, KeyHandler> = { POST: signLink, GET: readLink };
 async function route(request: Request): Promise<Response> {
   const { pathname } = new URL(request.url);
   if (pathname === "/api/storage/v1/objects") return listObjects(request);
+  if (pathname === "/api/storage/v1/ping") return ping(request);
+  if (pathname === "/api/storage/v1/usage") return usage(request);
   const [, table, rest] = /^\/api\/storage\/v1\/(objects|links)\/(.+)$/.exec(pathname) ?? [];
   const handler = (table === "objects" ? OBJECT : LINK)[request.method];
   if (!handler || !rest) return new Response(null, { status: 405 });
@@ -105,6 +109,51 @@ describe("the storage API for products through its routes (krizaka-internal#3756
     for (const made of all()) await endPool(made);
     await testDatabase?.drop();
     await rm(root, { recursive: true, force: true });
+  });
+
+  it("pages a list with `after`/`limit`, answers ping and usage, and puts X-Request-Id on every answer (krizaka-internal#4041)", async () => {
+    const { token } = await issue("verikora-pages", ["put", "get"]);
+    for (const name of ["a", "b", "c"])
+      await route(
+        new Request(
+          objectUrl(`p/${name}.pdf`),
+          bearer(token, { method: "PUT", body: PDF, headers: { "content-type": "application/pdf" } }),
+        ),
+      );
+    const first = await route(new Request(`${ORIGIN}/api/storage/v1/objects?prefix=p/&limit=2`, bearer(token)));
+    const page = await first.json();
+    expect(page.objects.map((o: { key: string }) => o.key)).toEqual(["p/a.pdf", "p/b.pdf"]);
+    expect(page).toMatchObject({ next: "p/b.pdf", truncated: true });
+    const second = await route(
+      new Request(`${ORIGIN}/api/storage/v1/objects?prefix=p/&limit=2&after=${page.next}`, bearer(token)),
+    );
+    expect(await second.json()).toMatchObject({ objects: [{ key: "p/c.pdf" }], next: null, truncated: false });
+    const bad = await route(new Request(`${ORIGIN}/api/storage/v1/objects?limit=0`, bearer(token)));
+    expect(bad.status).toBe(400);
+    expect((await bad.json()).code).toBe("STORAGE_INVALID_INPUT");
+
+    const who = await route(new Request(`${ORIGIN}/api/storage/v1/ping`, bearer(token)));
+    expect(await who.json()).toEqual({
+      tenant: "verikora-pages",
+      scopes: ["put", "get"],
+      keyExpiresAt: null,
+      api: "1.1.0",
+    });
+    const used = await (await route(new Request(`${ORIGIN}/api/storage/v1/usage`, bearer(token)))).json();
+    expect(used).toMatchObject({ objects: 3, quota: { bytes: 10_240 * 1024 * 1024, objects: 100_000 } });
+    expect(used.bytes).toBeGreaterThanOrEqual(3 * PDF.byteLength);
+
+    const echoed = await route(
+      new Request(`${ORIGIN}/api/storage/v1/ping`, bearer(token, { headers: { "x-request-id": "req-abc-123" } })),
+    );
+    expect(echoed.headers.get("x-request-id")).toBe("req-abc-123");
+    expect(who.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/);
+    const refused = await route(
+      new Request(`${ORIGIN}/api/storage/v1/ping`, { headers: { "x-request-id": "req-no-token" } }),
+    );
+    expect(refused.status).toBe(401);
+    expect(refused.headers.get("x-request-id")).toBe("req-no-token");
+    expect((await refused.json()).instance).toBe("urn:kridoc:request:req-no-token");
   });
 
   it("keeps only the token's keyed hash, and refuses a product's tenant that is another's or an account's", async () => {

@@ -3,7 +3,17 @@ import { STORAGE_CODE, StorageError } from "@krizaka/storage";
 import { describe, expect, it } from "vitest";
 
 import { STORAGE_API_ERROR, StorageApiError } from "./api-errors";
-import { bearerOf, boundedBody, keyOfSegments, objectResponse, storageApiCodeOf, storageApiRefusal } from "./api-http";
+import {
+  bearerOf,
+  boundedBody,
+  keyOfSegments,
+  objectResponse,
+  pageOf,
+  requestIdOf,
+  storageApiCodeOf,
+  storageApiRefusal,
+  withRequestId,
+} from "./api-http";
 
 const URL_ = "https://www.kridoc.com/api/storage/v1/objects/a";
 
@@ -63,5 +73,39 @@ describe("the storage API's HTTP edge", () => {
       "cache-control": "private, no-store",
     });
     expect(keyOfSegments(["a", "b.pdf"])).toBe("a/b.pdf");
+  });
+
+  describe("X-Request-Id (krizaka-internal#4041)", () => {
+    it("echoes a valid incoming id and generates one otherwise", () => {
+      expect(requestIdOf(new Headers({ "x-request-id": "req-1234.abc_XYZ" }))).toBe("req-1234.abc_XYZ");
+      for (const bad of ["", "a b", "x".repeat(129), "é", "a;b"]) {
+        const id = requestIdOf(new Headers({ "x-request-id": bad }));
+        expect(id).toMatch(/^[0-9a-f-]{36}$/);
+      }
+      expect(requestIdOf(new Headers())).not.toBe(requestIdOf(new Headers()));
+    });
+
+    it("is on every answer, and in the `instance` of a refusal", async () => {
+      const id = "req-77777777";
+      const refused = withRequestId(
+        storageApiRefusal(new StorageApiError(STORAGE_API_ERROR.notFound), new Request(URL_), id),
+        id,
+      );
+      expect(refused.headers.get("x-request-id")).toBe(id);
+      expect(refused.status).toBe(404);
+      expect((await refused.json()).instance).toBe(`urn:kridoc:request:${id}`);
+      expect(withRequestId(new Response("x", { status: 201 }), id).status).toBe(201);
+    });
+  });
+
+  describe("pageOf: `after` and `limit` of a list", () => {
+    it("reads them from the query; a limit that is not a whole number is refused", () => {
+      expect(pageOf(new URLSearchParams("after=a/b.pdf&limit=5"))).toEqual({ after: "a/b.pdf", limit: 5 });
+      expect(pageOf(new URLSearchParams(""))).toEqual({});
+      for (const limit of ["x", "0", "-2", "1.5", ""])
+        expect(() => pageOf(new URLSearchParams({ limit }))).toThrowError(
+          expect.objectContaining({ code: STORAGE_API_ERROR.invalidInput }),
+        );
+    });
   });
 });

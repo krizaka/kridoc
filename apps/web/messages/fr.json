@@ -81,6 +81,7 @@
       "STORAGE_LINK_REFUSED": "Ce lien n'est pas valide ou a expiré.",
       "STORAGE_DIGEST_MISMATCH": "Le contenu ne correspond pas à l'empreinte annoncée. Rien n'a été enregistré.",
       "STORAGE_OBJECT_EXISTS": "Un objet existe déjà sous cette clé avec un autre contenu.",
+      "STORAGE_QUOTA_EXCEEDED": "Cet espace de stockage est plein : le quota d'octets ou d'objets est atteint. Rien n'a été enregistré.",
       "STORAGE_INVALID_INPUT": "La requête n'est pas valide.",
       "RATE_LIMITED": "Trop de requêtes. Réessayez plus tard.",
       "INTERNAL": "Une erreur est survenue de notre côté. Réessayez plus tard."
@@ -103,6 +104,14 @@
     "retentionDays": {
       "label": "Conservation (jours)",
       "hint": "Les documents plus anciens sont supprimés par la tâche de conservation. Entre {min} et {max} jours."
+    },
+    "quotaMb": {
+      "label": "Quota par espace de produit (Mo)",
+      "hint": "Le plus qu'un espace de produit peut garder. Entre {min} et {max} Mo."
+    },
+    "quotaObjects": {
+      "label": "Objets par espace de produit",
+      "hint": "Le plus d'objets qu'un espace de produit peut garder. Entre {min} et {max}."
     },
     "types": {
       "legend": "Types de contenu acceptés",
