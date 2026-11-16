@@ -30,13 +30,40 @@ function refusalHeaders(error: unknown, code: StorageApiErrorCode): Record<strin
 }
 
 /** The one place a storage API refusal becomes an HTTP answer: status from the code, words from the catalogue. */
-export function storageApiRefusal(error: unknown, request: Request): Response {
+export function storageApiRefusal(error: unknown, request: Request, requestId?: string): Response {
   const code = storageApiCodeOf(error);
   // Only the kind of failure is logged: never a message (a provider's can carry a key), a token or a byte.
   if (code === STORAGE_API_ERROR.internal)
     console.error(`storage-api: unexpected failure (${error instanceof Error ? error.name : typeof error})`);
   const detail = getDictionary(localeOfRequest(request)).storageApi.errors[code];
-  return problemOf(code, STORAGE_API_STATUS[code], detail, refusalHeaders(error, code));
+  const instance = requestId === undefined ? undefined : `${REQUEST_INSTANCE}${requestId}`;
+  return problemOf(code, STORAGE_API_STATUS[code], detail, refusalHeaders(error, code), instance);
+}
+
+/** The prefix of a refusal's `instance` (RFC 9457): the request it answers, by its `X-Request-Id`. */
+const REQUEST_INSTANCE = "urn:kridoc:request:";
+/** An incoming request id worth echoing: short and made of safe characters (it goes into a header and a log). */
+const REQUEST_ID = /^[\w.-]{1,128}$/;
+
+/** The id of a request: the caller's `X-Request-Id` when it is valid, else a fresh one. */
+export const requestIdOf = (headers: Headers): string => {
+  const given = headers.get("x-request-id") ?? "";
+  return REQUEST_ID.test(given) ? given : crypto.randomUUID();
+};
+
+/** The same answer, with its request id (a copy: a Response's own headers may be frozen). */
+export const withRequestId = (response: Response, requestId: string): Response => {
+  const headers = new Headers(response.headers);
+  headers.set("X-Request-Id", requestId);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+};
+
+/** The page asked of a list: `?after=<last key seen>&limit=<n>`. @throws StorageApiError `STORAGE_INVALID_INPUT` (a limit that is not a whole number) */
+export function pageOf(query: URLSearchParams): { after?: string; limit?: number } {
+  const after = query.get("after");
+  const limit = query.get("limit");
+  if (limit !== null && !/^[1-9]\d{0,5}$/.test(limit)) throw new StorageApiError(STORAGE_API_ERROR.invalidInput);
+  return { ...(after ? { after } : {}), ...(limit === null ? {} : { limit: Number(limit) }) };
 }
 
 /** The bearer token of a request (`Authorization: Bearer kst1.…`), not yet checked. */

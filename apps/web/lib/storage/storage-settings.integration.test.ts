@@ -65,6 +65,8 @@ describe("the storage settings of the administrator", () => {
       types: ["application/octet-stream", "application/pdf", "image/png", "image/jpeg", "image/webp", "text/plain"],
       signedUrlSeconds: 300,
       retentionDays: 3650,
+      quotaBytes: 10_240 * MB,
+      quotaObjects: 100_000,
     });
   });
 
@@ -122,5 +124,15 @@ describe("the storage settings of the administrator", () => {
       max: 100,
     });
     expect(view.map((s) => s.key).sort()).toEqual(Object.values(STORAGE_SETTING).sort());
+  });
+
+  it("sets the quota of a product's space (bytes, objects) within bounds, applied at once and audited", async () => {
+    for (const bad of [{ [STORAGE_SETTING.quotaMb]: 0 }, { [STORAGE_SETTING.quotaObjects]: 10_000_001 }])
+      await expect(admin.change(ADMIN, bad)).rejects.toMatchObject({ code: STORAGE_ADMIN_ERROR.invalid });
+    await admin.change(ADMIN, { [STORAGE_SETTING.quotaMb]: 3, [STORAGE_SETTING.quotaObjects]: 7 });
+    expect(await rules()).toMatchObject({ quotaBytes: 3 * MB, quotaObjects: 7 });
+    expect((await admin.recent(ADMIN)).map((e) => e.targetId)).toEqual(
+      expect.arrayContaining([STORAGE_SETTING.quotaMb, STORAGE_SETTING.quotaObjects]),
+    );
   });
 });

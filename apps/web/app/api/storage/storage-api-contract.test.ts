@@ -33,6 +33,8 @@ describe("the storage API's OpenAPI document", async () => {
       "/api/storage/v1/links/{key}",
       "/api/storage/v1/objects",
       "/api/storage/v1/objects/{key}",
+      "/api/storage/v1/ping",
+      "/api/storage/v1/usage",
     ]);
   });
 

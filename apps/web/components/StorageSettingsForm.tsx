@@ -15,6 +15,8 @@ const storageForm = createKrizakaForm({
     maxMb: whole,
     signedUrlSeconds: whole,
     retentionDays: whole,
+    quotaMb: whole,
+    quotaObjects: whole,
     octetStream: z.boolean(),
     pdf: z.boolean(),
     png: z.boolean(),
@@ -26,6 +28,8 @@ const storageForm = createKrizakaForm({
     maxMb: "",
     signedUrlSeconds: "",
     retentionDays: "",
+    quotaMb: "",
+    quotaObjects: "",
     octetStream: false,
     pdf: false,
     png: false,
@@ -57,19 +61,30 @@ export interface StorageSettingsFormProps {
     maxMb: { label: string; hint: string };
     signedUrlSeconds: { label: string; hint: string };
     retentionDays: { label: string; hint: string };
+    quotaMb: { label: string; hint: string };
+    quotaObjects: { label: string; hint: string };
     types: { legend: string; hint: string };
     save: string;
     saved: string;
     failed: string;
   };
   /** The values now, and the bounds the server enforces (drawn from the registry by the page). */
-  current: { maxMb: number; signedUrlSeconds: number; retentionDays: number; types: readonly string[] };
+  current: {
+    maxMb: number;
+    signedUrlSeconds: number;
+    retentionDays: number;
+    quotaMb: number;
+    quotaObjects: number;
+    types: readonly string[];
+  };
 }
 
 const DEFAULTS_OF = (current: StorageSettingsFormProps["current"]) => ({
   maxMb: String(current.maxMb),
   signedUrlSeconds: String(current.signedUrlSeconds),
   retentionDays: String(current.retentionDays),
+  quotaMb: String(current.quotaMb),
+  quotaObjects: String(current.quotaObjects),
   ...Object.fromEntries(Object.entries(TYPE_FIELDS).map(([field, type]) => [field, current.types.includes(type)])),
 });
 
@@ -82,11 +97,13 @@ function changesOf(values: Record<string, unknown>): Record<string, unknown> {
     "storage.maxMb": Number(values.maxMb),
     "storage.signedUrlSeconds": Number(values.signedUrlSeconds),
     "storage.retentionDays": Number(values.retentionDays),
+    "storage.quotaMb": Number(values.quotaMb),
+    "storage.quotaObjects": Number(values.quotaObjects),
     "storage.allowedTypes": types,
   };
 }
 
-const NUMBER_FIELDS = ["maxMb", "signedUrlSeconds", "retentionDays"] as const;
+const NUMBER_FIELDS = ["maxMb", "signedUrlSeconds", "retentionDays", "quotaMb", "quotaObjects"] as const;
 
 /** The administrator's storage settings on @krizaka/ui's form. The server checks the bounds and answers a refusal in the visitor's language. */
 export function StorageSettingsForm({ locale, labels, current }: Readonly<StorageSettingsFormProps>) {

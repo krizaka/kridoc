@@ -24,3 +24,4 @@ docs/screenshots/
 # Playwright journeys
 test-results/
 playwright-report/
+.vitest/

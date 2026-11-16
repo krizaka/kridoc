@@ -85,7 +85,14 @@ describe("the retention sweep", () => {
       store,
       cursor,
       objects,
-      rules: async () => ({ maxBytes: 1, types: [], signedUrlSeconds: 1, retentionDays }),
+      rules: async () => ({
+        maxBytes: 1,
+        types: [],
+        signedUrlSeconds: 1,
+        retentionDays,
+        quotaBytes: 1,
+        quotaObjects: 1,
+      }),
       audit: async (line) => {
         audit.push(line);
       },

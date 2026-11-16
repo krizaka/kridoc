@@ -48,6 +48,8 @@ function formPropsOf(t: Messages["storageAdmin"], settings: StorageSettingView[]
         hint: hint(t.signedUrlSeconds.hint, STORAGE_SETTING.signedUrlSeconds),
       },
       retentionDays: { label: t.retentionDays.label, hint: hint(t.retentionDays.hint, STORAGE_SETTING.retentionDays) },
+      quotaMb: { label: t.quotaMb.label, hint: hint(t.quotaMb.hint, STORAGE_SETTING.quotaMb) },
+      quotaObjects: { label: t.quotaObjects.label, hint: hint(t.quotaObjects.hint, STORAGE_SETTING.quotaObjects) },
       types: t.types,
       save: t.save,
       saved: t.saved,
@@ -57,6 +59,8 @@ function formPropsOf(t: Messages["storageAdmin"], settings: StorageSettingView[]
       maxMb: value(STORAGE_SETTING.maxMb) as number,
       signedUrlSeconds: value(STORAGE_SETTING.signedUrlSeconds) as number,
       retentionDays: value(STORAGE_SETTING.retentionDays) as number,
+      quotaMb: value(STORAGE_SETTING.quotaMb) as number,
+      quotaObjects: value(STORAGE_SETTING.quotaObjects) as number,
       types: value(STORAGE_SETTING.allowedTypes) as string[],
     },
   };

@@ -5,7 +5,7 @@ import { databaseOf } from "@/lib/db/connection";
 import { createStorageClientStore } from "@/lib/db/storage-client-store";
 import { type Env, readEnv, SETTINGS } from "@/lib/env";
 import { STORAGE_API_ERROR, StorageApiError } from "@/lib/storage/api-errors";
-import { bearerOf, storageApiRefusal } from "@/lib/storage/api-http";
+import { bearerOf, requestIdOf, storageApiRefusal, withRequestId } from "@/lib/storage/api-http";
 import type { StorageClient } from "@/lib/storage/client-port";
 import { clientTokensOf } from "@/lib/storage/client-tokens";
 import { derivedSecretOf, SECRET_PURPOSE } from "@/lib/storage/derived-secrets";
@@ -86,18 +86,26 @@ export function storageApiRuntime(env: Env = readEnv()): StorageApiRuntime {
   return { api, clients, rules, env };
 }
 
+/** Runs a route's work and answers with the request's `X-Request-Id` (echoed when valid, else generated), refusals included. */
+async function answered(request: Request, work: () => Promise<Response>): Promise<Response> {
+  const requestId = requestIdOf(request.headers);
+  try {
+    return withRequestId(await work(), requestId);
+  } catch (error) {
+    return withRequestId(storageApiRefusal(error, request, requestId), requestId);
+  }
+}
+
 /** A route of a product's client, whole: the feature check, the token (and the limiter), then the route's one service call. */
 export async function storageApiRoute(
   request: Request,
   work: (context: StorageApiRuntime & { client: StorageClient }) => Promise<Response>,
 ): Promise<Response> {
-  try {
+  return answered(request, async () => {
     const runtime = storageApiRuntime();
     const client = await runtime.api.authenticate(bearerOf(request.headers));
-    return await work({ ...runtime, client });
-  } catch (error) {
-    return storageApiRefusal(error, request);
-  }
+    return work({ ...runtime, client });
+  });
 }
 
 /** The route of a signed link: no token, the link's own signature; the same refusals. */
@@ -105,9 +113,5 @@ export async function storageLinkRoute(
   request: Request,
   work: (runtime: StorageApiRuntime) => Promise<Response>,
 ): Promise<Response> {
-  try {
-    return await work(storageApiRuntime());
-  } catch (error) {
-    return storageApiRefusal(error, request);
-  }
+  return answered(request, () => work(storageApiRuntime()));
 }
