@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -27,6 +27,8 @@ import { GET as listObjects } from "./v1/objects/route";
 const url = process.env.DATABASE_URL;
 const ORIGIN = "https://www.kridoc.com";
 const PDF = new TextEncoder().encode("%PDF-1.7\n1 0 obj << >> endobj\n%%EOF\n");
+const PDF_SHA256 = createHash("sha256").update(PDF).digest("hex");
+const PDF_DIGEST = `sha-256=:${Buffer.from(PDF_SHA256, "hex").toString("base64")}:`;
 const ALL: StorageScope[] = ["put", "get", "delete", "sign"];
 
 type KeyParams = { params: Promise<{ key: string[] }> };
@@ -138,7 +140,9 @@ describe("the storage API for products through its routes (krizaka-internal#3756
       key: "docs/lease.pdf",
       size: PDF.byteLength,
       contentType: "application/pdf",
+      sha256: PDF_SHA256,
     });
+    expect(put.headers.get("repr-digest")).toBe(PDF_DIGEST);
 
     const own = await route(new Request(objectUrl("docs/lease.pdf"), bearer(mine)));
     expect(own.status).toBe(200);
@@ -216,6 +220,45 @@ describe("the storage API for products through its routes (krizaka-internal#3756
       new Request(`${ORIGIN}/api/storage/v1/links/a.pdf`, bearer(token, { method: "POST", body: "{" })),
     );
     expect(bad.status).toBe(400);
+  });
+
+  it("v1.1: refuses a wrong Repr-Digest, replays a create-only write, refuses another body, and answers a deletion record", async () => {
+    const { token } = await issue("verikora-d");
+    const put = (headers: Record<string, string>, body: Uint8Array<ArrayBuffer> = PDF.slice()) =>
+      route(
+        new Request(
+          objectUrl("v/a.pdf"),
+          bearer(token, { method: "PUT", body, headers: { "content-type": "application/pdf", ...headers } }),
+        ),
+      );
+    const wrong = await put({ "repr-digest": `sha-256=:${Buffer.alloc(32).toString("base64")}:` });
+    expect(wrong.status).toBe(400);
+    expect((await wrong.json()).code).toBe("STORAGE_DIGEST_MISMATCH");
+    expect((await route(new Request(objectUrl("v/a.pdf"), bearer(token)))).status).toBe(404);
+
+    const created = await put({ "repr-digest": PDF_DIGEST, "if-none-match": "*" });
+    expect(created.status).toBe(201);
+    expect(created.headers.get("idempotent-replayed")).toBeNull();
+    const replay = await put({ "if-none-match": "*" });
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get("idempotent-replayed")).toBe("true");
+    expect((await replay.json()).object.sha256).toBe(PDF_SHA256);
+    const other = await put({ "if-none-match": "*" }, new TextEncoder().encode("%PDF-1.7\nother\n%%EOF\n"));
+    expect(other.status).toBe(412);
+    expect((await other.json()).code).toBe("STORAGE_OBJECT_EXISTS");
+
+    const read = await route(new Request(objectUrl("v/a.pdf"), bearer(token)));
+    expect(read.headers.get("repr-digest")).toBe(PDF_DIGEST);
+    const removed = await route(new Request(objectUrl("v/a.pdf"), bearer(token, { method: "DELETE" })));
+    expect(removed.status).toBe(200);
+    expect(await removed.json()).toMatchObject({
+      key: "v/a.pdf",
+      sha256: PDF_SHA256,
+      size: PDF.byteLength,
+      recordId: expect.stringMatching(/^del_[0-9a-f]{24}$/),
+    });
+    const absent = await route(new Request(objectUrl("v/a.pdf"), bearer(token, { method: "DELETE" })));
+    expect(await absent.json()).toEqual({ key: "v/a.pdf", absent: true });
   });
 
   // The contract shared with Verikora: the reference client over the routes passes the same `objectStoreContract` as every adapter.

@@ -42,6 +42,8 @@ every string in `messages/*.json`, `@krizaka/ui` blocks, tests with every change
   `storageApi.errors`), limits `SETTINGS.storageApi`. Same switch as the documents (`MEDIA_STORAGE_ENABLED`, off: every route 404). The
   contract with Verikora is `docs/architecture/kridoc-storage-api.v1.openapi.yaml` (Verikora generates its types from a copy) and
   `objectStoreContract`, run against the routes through `lib/storage/kridoc-api-store.ts`.
+- **Storage API v1.1** (krizaka-internal#4041, first half): `Repr-Digest` both ways (`lib/storage/object-digest.ts`), create-only with `If-None-Match: *`
+  (200 + `Idempotent-Replayed`, or 412), `DELETE` answers a deletion record (also an audit line). Ping, usage/quota, cursor list, `X-Request-Id` follow.
 - **Storage settings, audit and retention** (krizaka-internal#3755, slice 4 of the design note): the rules every upload and every link obeys are
   settings of `@krizaka/settings` (`apps/web/lib/storage/storage-settings.ts`: `storage.maxMb` 1-100, `storage.allowedTypes`, `storage.signedUrlSeconds`
   30-3600, `storage.retentionDays` 30-3650; global scope, defaults = what the code did before), read on **every** upload and link by the documents

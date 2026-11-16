@@ -79,6 +79,8 @@
       "STORAGE_OBJECT_TOO_BIG": "This object is empty or too large.",
       "STORAGE_TYPE_REFUSED": "This type of content is not accepted.",
       "STORAGE_LINK_REFUSED": "This link is not valid or has expired.",
+      "STORAGE_DIGEST_MISMATCH": "The content does not match its declared digest. Nothing was stored.",
+      "STORAGE_OBJECT_EXISTS": "An object with this key already exists with other content.",
       "STORAGE_INVALID_INPUT": "The request is not valid.",
       "RATE_LIMITED": "Too many requests. Try again later.",
       "INTERNAL": "Something went wrong on our side. Try again later."

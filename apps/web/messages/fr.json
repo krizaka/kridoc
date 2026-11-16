@@ -79,6 +79,8 @@
       "STORAGE_OBJECT_TOO_BIG": "Cet objet est vide ou trop gros.",
       "STORAGE_TYPE_REFUSED": "Ce type de contenu n'est pas accepté.",
       "STORAGE_LINK_REFUSED": "Ce lien n'est pas valide ou a expiré.",
+      "STORAGE_DIGEST_MISMATCH": "Le contenu ne correspond pas à l'empreinte annoncée. Rien n'a été enregistré.",
+      "STORAGE_OBJECT_EXISTS": "Un objet existe déjà sous cette clé avec un autre contenu.",
       "STORAGE_INVALID_INPUT": "La requête n'est pas valide.",
       "RATE_LIMITED": "Trop de requêtes. Réessayez plus tard.",
       "INTERNAL": "Une erreur est survenue de notre côté. Réessayez plus tard."

@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 import { createLimiter, memoryLimitStore, RateLimited } from "@krizaka/rate-limit";
 import {
@@ -23,6 +23,7 @@ import type { StorageRules } from "./storage-settings";
 
 const PDF = new TextEncoder().encode("%PDF-1.7\n1 0 obj << >> endobj\n%%EOF\n");
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+const PDF_SHA256 = createHash("sha256").update(PDF).digest("hex");
 const LIMITS = { listMax: 100 };
 const DEFAULT_RULES: StorageRules = {
   maxBytes: 64,
@@ -132,7 +133,11 @@ describe("the storage API for products (krizaka-internal#3756)", () => {
       const got = await api.get(mine, "docs/lease.pdf");
       expect([...got.bytes]).toEqual([...PDF]);
       expect(got.contentType).toBe("application/pdf");
-      expect(await api.head(mine, "docs/lease.pdf")).toEqual({ key: "docs/lease.pdf", size: PDF.byteLength });
+      expect(await api.head(mine, "docs/lease.pdf")).toEqual({
+        key: "docs/lease.pdf",
+        size: PDF.byteLength,
+        sha256: PDF_SHA256,
+      });
 
       await expect(api.get(theirs, "docs/lease.pdf")).rejects.toMatchObject({ code: STORAGE_API_ERROR.notFound });
       await expect(api.head(theirs, "docs/lease.pdf")).rejects.toMatchObject({ code: STORAGE_API_ERROR.notFound });
@@ -210,6 +215,64 @@ describe("the storage API for products (krizaka-internal#3756)", () => {
         lines.every((l) => l.actor.id === client.id && l.actor.kind === "client" && l.tenantId === "verikora-prod"),
       ).toBe(true);
       expect(JSON.stringify(audit)).not.toContain("secret-name");
+    });
+  });
+
+  describe("v1.1: digest, create-only and the deletion record (krizaka-internal#4041)", () => {
+    const wrong = "0".repeat(64);
+
+    it("keeps the digest of what it received and returns it on put, get and head", async () => {
+      const mine = await api.authenticate((await issue()).token);
+      const stored = await api.put(mine, "d/a.pdf", PDF, "application/pdf", { sha256: PDF_SHA256 });
+      expect(stored).toMatchObject({ sha256: PDF_SHA256, size: PDF.byteLength, replayed: false });
+      expect((await api.get(mine, "d/a.pdf")).sha256).toBe(PDF_SHA256);
+      expect((await api.head(mine, "d/a.pdf")).sha256).toBe(PDF_SHA256);
+      expect((await api.put(mine, "d/b.pdf", PDF, "application/pdf")).sha256).toBe(PDF_SHA256);
+    });
+
+    it("refuses a wrong digest and writes nothing", async () => {
+      const mine = await api.authenticate((await issue()).token);
+      await expect(api.put(mine, "d/a.pdf", PDF, "application/pdf", { sha256: wrong })).rejects.toMatchObject({
+        code: STORAGE_API_ERROR.digestMismatch,
+      });
+      expect(await inner.list("")).toEqual([]);
+    });
+
+    it("create-only: the same key with the same digest is a replay, another digest is refused, a free key is created", async () => {
+      const mine = await api.authenticate((await issue()).token);
+      const first = await api.put(mine, "d/a.pdf", PDF, "application/pdf", { createOnly: true });
+      expect(first.replayed).toBe(false);
+      const again = await api.put(mine, "d/a.pdf", PDF, "application/pdf", { createOnly: true, sha256: PDF_SHA256 });
+      expect(again).toMatchObject({ replayed: true, sha256: PDF_SHA256, key: "d/a.pdf" });
+      await expect(api.put(mine, "d/a.pdf", PNG, "image/png", { createOnly: true })).rejects.toMatchObject({
+        code: STORAGE_API_ERROR.objectExists,
+      });
+      expect([...(await api.get(mine, "d/a.pdf")).bytes]).toEqual([...PDF]);
+      // without create-only, v1 behaviour: the key is replaced
+      await api.put(mine, "d/a.pdf", PNG, "image/png");
+      expect((await api.get(mine, "d/a.pdf")).contentType).toBe("image/png");
+    });
+
+    it("deletes with a record: key, time, digest, size and an id; the ledger line carries no key", async () => {
+      const mine = await api.authenticate((await issue()).token);
+      await api.put(mine, "secret-name/a.pdf", PDF, "application/pdf");
+      const record = await api.remove(mine, "secret-name/a.pdf");
+      expect(record).toMatchObject({
+        key: "secret-name/a.pdf",
+        deletedAt: now.toISOString(),
+        sha256: PDF_SHA256,
+        size: PDF.byteLength,
+      });
+      expect(record).toHaveProperty("recordId");
+      const line = audit.find((l) => l.action === "storage.deleted");
+      expect(line?.detail).toMatchObject({ recordId: (record as { recordId: string }).recordId, sha256: PDF_SHA256 });
+      expect(JSON.stringify(audit)).not.toContain("secret-name");
+      expect(await inner.list("")).toEqual([]);
+    });
+
+    it("deleting a missing key says it is absent and is not an error", async () => {
+      const mine = await api.authenticate((await issue()).token);
+      expect(await api.remove(mine, "d/none.pdf")).toEqual({ key: "d/none.pdf", absent: true });
     });
   });
 
