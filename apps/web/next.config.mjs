@@ -1,5 +1,7 @@
 import { fileURLToPath } from "node:url";
 
+// @fixed: the registered dev host of Kridoc (lib/dev-host.ts keeps the same name)
+const DEV_HOST = "dev.kridoc.com";
 const production = process.env.NODE_ENV === "production";
 // Nothing but this origin (+ the media CDN): no third-party script, frame or font.
 const csp = [
@@ -37,6 +39,12 @@ const nextConfig = {
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         ],
+      },
+      // The development address (an alias of this app) is never indexed, robots.txt included (it bypasses proxy.ts, lib/dev-host.ts).
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: DEV_HOST }],
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
       { source: "/.well-known/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     ];
