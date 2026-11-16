@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/krizaka/kridoc/compare/v0.9.0...v0.9.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* **seo:** dev.kridoc.com answers robots Disallow and X-Robots-Tag noindex (krizaka-internal[#3899](https://github.com/krizaka/kridoc/issues/3899)) ([#63](https://github.com/krizaka/kridoc/issues/63)) ([d640d74](https://github.com/krizaka/kridoc/commit/d640d746f21cf88ce4a148566cfa282c35fe629d))
+
 ## [0.9.0](https://github.com/krizaka/kridoc/compare/v0.8.0...v0.9.0) (2026-11-15)
 
 
