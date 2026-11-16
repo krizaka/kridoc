@@ -36,7 +36,7 @@ info:
     is 1 to 128 characters of letters, digits, `.`, `_` or `-`, else a generated one; a refusal repeats it in its `instance`
     (`urn:kridoc:request:<id>`). **Create-only is atomic** inside one Kridoc instance: of two concurrent writes of one key with different
     bytes exactly one wins and the other is `412`. TypeScript types of this document are generated
-    (`apps/web/lib/storage/generated/storage-api.d.ts`) and a test fails when they drift.
+    (`apps/web/lib/storage/storage-api.generated.d.ts`) and a test fails when they drift.
 
     **Refusals** are Problem Details (RFC 9457) with a stable `code`: `STORAGE_API_OFF` 404, `STORAGE_UNAUTHENTICATED` 401,
     `STORAGE_SCOPE_REFUSED` 403, `STORAGE_OBJECT_NOT_FOUND` 404, `STORAGE_KEY_REFUSED` 400, `STORAGE_OBJECT_TOO_BIG` 413,

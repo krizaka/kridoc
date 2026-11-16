@@ -9,7 +9,7 @@ const PACKAGE_DIR = pathToFileURL(`${process.cwd()}/`);
 export const STORAGE_API_DOCUMENT = new URL("../../docs/architecture/kridoc-storage-api.v1.openapi.yaml", PACKAGE_DIR);
 
 /** The generated TypeScript types, committed beside the code that uses them; a test fails when they drift from the document. */
-export const STORAGE_API_TYPES_FILE = new URL("lib/storage/generated/storage-api.d.ts", PACKAGE_DIR);
+export const STORAGE_API_TYPES_FILE = new URL("lib/storage/storage-api.generated.d.ts", PACKAGE_DIR);
 
 /** The types of the document, as openapi-typescript writes them. */
 export async function generatedStorageApiTypes(): Promise<string> {

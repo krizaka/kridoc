@@ -47,7 +47,7 @@ every string in `messages/*.json`, `@krizaka/ui` blocks, tests with every change
   record (also an audit line). List pages with `after` + `limit` and answers `{ objects, next, truncated }`; `GET /ping` and `GET /usage`; the quota
   per tenant (`storage.quotaMb`, `storage.quotaObjects`, admin screen) refuses a write with `403 STORAGE_QUOTA_EXCEEDED` before any byte is kept;
   `X-Request-Id` on every answer (echoed when valid, in a refusal's `instance`). Types are generated from the OpenAPI file
-  (`pnpm --filter @kridoc/web storage:types` → `lib/storage/generated/storage-api.d.ts`); `storage-api-types.test.ts` fails on drift.
+  (`pnpm --filter @kridoc/web storage:types` → `lib/storage/storage-api.generated.d.ts`); `storage-api-types.test.ts` fails on drift.
 - **Storage settings, audit and retention** (krizaka-internal#3755, slice 4 of the design note): the rules every upload and every link obeys are
   settings of `@krizaka/settings` (`apps/web/lib/storage/storage-settings.ts`: `storage.maxMb` 1-100, `storage.allowedTypes`, `storage.signedUrlSeconds`
   30-3600, `storage.retentionDays` 30-3650; global scope, defaults = what the code did before), read on **every** upload and link by the documents
