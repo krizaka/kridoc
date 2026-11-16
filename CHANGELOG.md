@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/krizaka/kridoc/compare/v0.11.0...v0.12.0) (2026-11-16)
+
+
+### Features
+
+* **storage-api:** v1.1 second half — pages, ping, usage, quota, X-Request-Id, atomic create-only ([#4041](https://github.com/krizaka/kridoc/issues/4041)) ([#74](https://github.com/krizaka/kridoc/issues/74)) ([22f4518](https://github.com/krizaka/kridoc/commit/22f4518148b099884758a4ef32cdae7709d5223c))
+
 ## [0.11.0](https://github.com/krizaka/kridoc/compare/v0.10.0...v0.11.0) (2026-11-16)
 
 
