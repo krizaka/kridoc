@@ -58,3 +58,12 @@ describe("a site for a product in development", () => {
     expect(graph[0].publisher["@id"]).toBe("https://www.krizaka.com/#organization");
   });
 });
+
+describe("the product names its own licence (krizaka-internal#4148)", () => {
+  it("llms.txt says FSL-1.1-ALv2 with a link to LICENSE.md and makes no open-source claim", () => {
+    const text = llmsText();
+    expect(text).toContain("FSL-1.1-ALv2");
+    expect(text).toContain("https://github.com/krizaka/kridoc/blob/main/LICENSE.md");
+    expect(text).not.toMatch(/Apache|\bMIT\b|open[- ]source|\blibre\b/i);
+  });
+});

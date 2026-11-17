@@ -45,6 +45,8 @@ function fixture() {
     ["user.email", "t@t"],
     ["commit.gpgsign", "false"],
     ["tag.gpgsign", "false"],
+    // hermetic: the machine-wide git hooks (identity guard) are for real work, not for this throw-away repository
+    ["core.hooksPath", "/dev/null"],
   ])
     git(work, "config", k, v);
   git(work, "checkout", "--quiet", "-b", "main");
