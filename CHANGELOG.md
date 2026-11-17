@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/krizaka/kridoc/compare/v0.12.0...v0.12.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* **site:** kridoc names its own licence, FSL-1.1-ALv2 ([#77](https://github.com/krizaka/kridoc/issues/77)) ([efec43a](https://github.com/krizaka/kridoc/commit/efec43a6df33197378e453d1e43226fe8891f5f2))
+
 ## [0.12.0](https://github.com/krizaka/kridoc/compare/v0.11.0...v0.12.0) (2026-11-16)
 
 
