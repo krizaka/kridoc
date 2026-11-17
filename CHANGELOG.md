@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.2](https://github.com/krizaka/kridoc/compare/v0.12.1...v0.12.2) (2026-11-17)
+
+
+### Bug Fixes
+
+* **security:** Next 16.4.6 (November 2026 Next.js security release) ([#76](https://github.com/krizaka/kridoc/issues/76)) ([553df20](https://github.com/krizaka/kridoc/commit/553df2061392a4eca6d53f715280dc3ed64db86d))
+
 ## [0.12.1](https://github.com/krizaka/kridoc/compare/v0.12.0...v0.12.1) (2026-11-17)
 
 
