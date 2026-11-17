@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 
 import { getDictionary, type Locale } from "@/lib/i18n";
-import { KRIZAKA_URL, REPO_URL, SITE_URL } from "@/lib/site";
+import { KRIZAKA_URL, LICENSE_URL, REPO_URL, SITE_URL } from "@/lib/site";
 
 export const ORG_ID = `${KRIZAKA_URL}/#organization`;
 const ORG = { "@type": "Organization", "@id": ORG_ID, name: "Krizaka", url: KRIZAKA_URL };
@@ -90,11 +90,11 @@ export function llmsText(): string {
 
 ## Source
 
-- [Repository](${REPO_URL})
+- [Repository](${REPO_URL}) (FSL-1.1-ALv2, [licence](${LICENSE_URL}))
 
 ## Publisher
 
-- [Krizaka](${KRIZAKA_URL}): the company, an open-source software studio in Montréal
+- [Krizaka](${KRIZAKA_URL}): the company, a software studio in Montréal
 
 Languages: French and English. Sitemap: ${SITE_URL}/sitemap.xml
 `;
