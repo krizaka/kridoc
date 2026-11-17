@@ -24,6 +24,8 @@
     "releaseNotesAria": "Le journal des versions de Kridoc sur krizaka.com (en français)",
     "source": "Code source",
     "sourceAria": "Le code source de Kridoc sur GitHub",
+    "license": "Licence : FSL-1.1-ALv2",
+    "licenseAria": "La licence de Kridoc, FSL-1.1-ALv2, sur GitHub",
     "products": "Nos produits",
     "productsAria": "Les produits Krizaka sur krizaka.com (en français)"
   },

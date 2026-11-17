@@ -15,7 +15,7 @@ import { ThemeToggle } from "@krizaka/ui/theme";
 
 import { getDictionary, type Locale, LOCALES } from "@/lib/i18n";
 import { siteJsonLd } from "@/lib/seo";
-import { contactUrl, KRIZAKA_URL, productsUrl, releaseNotesUrl, REPO_URL } from "@/lib/site";
+import { contactUrl, KRIZAKA_URL, LICENSE_URL, productsUrl, releaseNotesUrl, REPO_URL } from "@/lib/site";
 
 type Dictionary = ReturnType<typeof getDictionary>;
 
@@ -43,11 +43,16 @@ function Bar({ locale, t }: Readonly<{ locale: Locale; t: Dictionary }>) {
 /* Follow-up #3562: the footer's links come from the org JSON (`footerFor`) once Kridoc is a site of it; `org` itself is not passed
    to the client footer (47 KB of facts), only the legal links are read from it. */
 function FamilyFooter({ locale, t }: Readonly<{ locale: Locale; t: Dictionary }>) {
-  const legal = org.footer.legal.map((l) => (
-    <SiteFooterLink key={l.id} href={l.url[locale]}>
-      {l.label[locale]}
-    </SiteFooterLink>
-  ));
+  const legal = [
+    <SiteFooterLink key="license" href={LICENSE_URL} aria-label={t.footer.licenseAria}>
+      {t.footer.license}
+    </SiteFooterLink>,
+    ...org.footer.legal.map((l) => (
+      <SiteFooterLink key={l.id} href={l.url[locale]}>
+        {l.label[locale]}
+      </SiteFooterLink>
+    )),
+  ];
   return (
     <SiteFooter
       current="krizaka"
