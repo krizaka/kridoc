@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/krizaka/kridoc/compare/v0.12.2...v0.13.0) (2026-11-18)
+
+
+### Features
+
+* **intake:** an upload goes quarantine, size, type, scan, seal, documents ([#81](https://github.com/krizaka/kridoc/issues/81)) ([5262ec3](https://github.com/krizaka/kridoc/commit/5262ec3784bbf38cef3aee607ab0445ff4a19e7a))
+
 ## [0.12.2](https://github.com/krizaka/kridoc/compare/v0.12.1...v0.12.2) (2026-11-17)
 
 
