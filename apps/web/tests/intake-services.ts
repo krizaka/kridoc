@@ -43,6 +43,10 @@ const docker = (...args: string[]): string => execFileSync(dockerBinary(), args,
 const hostPortOf = (container: string, port: number): number =>
   Number(docker("port", container, String(port)).split("\n")[0]?.split(":").pop());
 
+/** `--user <uid>:<gid>` of this process, so a container's files in a mounted folder belong to it; nothing where the platform has no uid. */
+export const hostUser = (): string[] =>
+  process.getuid && process.getgid ? ["--user", `${process.getuid()}:${process.getgid()}`] : [];
+
 async function until(what: string, seconds: number, ready: () => Promise<boolean> | boolean): Promise<void> {
   const end = Date.now() + seconds * 1000;
   while (Date.now() < end) {
@@ -60,8 +64,10 @@ export async function startIntakeServices(buckets: readonly string[]): Promise<I
     mkdirSync(join(data, bucket));
     chmodSync(join(data, bucket), 0o777);
   }
+  // The server runs as the host user: what it writes in the mounted folder (`.minio.sys/`) stays removable by `stop()` on Linux, where the
+  // image's own non-root user would own it (Docker Desktop remaps owners, so macOS never showed it).
   const s3 = docker(
-    "run", "-d", "--rm", "-p", "127.0.0.1::9000",
+    "run", "-d", "--rm", "-p", "127.0.0.1::9000", ...hostUser(),
     "-e", `MINIO_ROOT_USER=${INTAKE_S3_KEYS.accessKeyId}`, "-e", `MINIO_ROOT_PASSWORD=${INTAKE_S3_KEYS.secretAccessKey}`,
     "-v", `${data}:/data`, INTAKE_IMAGES.s3, "server", "/data",
   ); // prettier-ignore
