@@ -1,4 +1,4 @@
-import { type MalwareScanner, type ObjectStore, sniffType } from "@krizaka/storage";
+import { type MalwareScanner, type ObjectStore, type ScanResult, sniffType } from "@krizaka/storage";
 
 import { DOCUMENT_ERROR, DocumentError, type DocumentErrorCode } from "./errors";
 import type { StorageRulesSource } from "./storage-settings";
@@ -46,13 +46,14 @@ export async function screenQuarantined(deps: IntakeDeps, key: string): Promise<
   const mediaType = sniffType(found.bytes);
   if (mediaType === null || !rules.types.includes(mediaType)) return refuse(DOCUMENT_ERROR.badType);
   const verdict = await deps.scanner.scan({ key }, { timeoutMs: rules.scanTimeoutSeconds * 1000 });
-  switch (verdict.status) {
-    case "infected":
-      return refuse(DOCUMENT_ERROR.infected);
-    case "error":
+  // One answer per verdict, checked exhaustive by the type: only « clean » publishes; an error keeps the file in quarantine.
+  const onVerdict: Record<ScanResult["status"], () => Promise<ScreenedFile>> = {
+    clean: () => Promise.resolve({ bytes: found.bytes, mediaType }),
+    infected: () => refuse(DOCUMENT_ERROR.infected),
+    error: async () => {
       await deps.note(INTAKE_OUTCOME.held, DOCUMENT_ERROR.scannerUnavailable);
       throw new DocumentError(DOCUMENT_ERROR.scannerUnavailable);
-    case "clean":
-      return { bytes: found.bytes, mediaType };
-  }
+    },
+  };
+  return onVerdict[verdict.status]();
 }
