@@ -63,6 +63,16 @@ every string in `messages/*.json`, `@krizaka/ui` blocks, tests with every change
   (rules unreadable or a store failing: the run stops, nothing more is deleted). Only Kridoc's own documents are swept: a product's tenant
   (`verikora-prod`) keeps its objects until the product deletes them. The journey is `pnpm test:e2e` (Playwright, `apps/web/e2e/`; needs `DATABASE_URL`
   on a throwaway server: it makes and drops its own database `kridoc_e2e`).
+- **Intake** (krizaka-internal#4196): an upload is never a document until it has passed, in order, the **quarantine** (a store of its own, `quarantineStoreOf`;
+  `quarantine/<owner>/<id>`), the **size** (a HEAD: a refused file is not read), the real **type** by magic number, the **scan** (`MalwareScanner` of
+  `@krizaka/storage`: clamd through `scanDaemon`, `lib/storage/document-scanner.ts`; no `MEDIA_SCAN_CLAMD_HOST` means a scanner that always errors, so nothing is
+  ever published), then the **seal** under the owner's key into the documents and the quarantine's deletion (`lib/storage/document-intake.ts`,
+  `DocumentService.upload` / `admit`). Infected, too big or of a refused type: refused and deleted (`FILE_INFECTED` 422, `FILE_TOO_BIG` 413,
+  `FILE_TYPE_REFUSED` 415). Scanner down, slow or confused: the file **stays in quarantine** and the answer is `SCANNER_UNAVAILABLE` 503. Each refusal
+  or hold is one audit line (`storage.intake.refused|held`, the code, no content). The scan timeout is the administrator's setting
+  `storage.scanTimeoutSeconds` (5-120 s, default 30; the size is `storage.maxMb`, 1-100). The journey runs on a real S3 server and ClamAV
+  (`lib/storage/intake-services.ts`: official images pinned by digest, started with the Docker CLI; never skipped).
+  ClamAV flags EICAR only as a plain file, which the intake refuses by type first; the scan step is proved with a marker signature inside a PDF.
 - `dev-preview.json` is data: `devPreview` is claimed only when every criterion has fresh evidence.
 
 ## 9. Anti-slop (ADR-015)

@@ -92,6 +92,7 @@ describe("the retention sweep", () => {
         retentionDays,
         quotaBytes: 1,
         quotaObjects: 1,
+        scanTimeoutSeconds: 30,
       }),
       audit: async (line) => {
         audit.push(line);

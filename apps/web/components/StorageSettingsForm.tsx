@@ -17,6 +17,7 @@ const storageForm = createKrizakaForm({
     retentionDays: whole,
     quotaMb: whole,
     quotaObjects: whole,
+    scanTimeoutSeconds: whole,
     octetStream: z.boolean(),
     pdf: z.boolean(),
     png: z.boolean(),
@@ -30,6 +31,7 @@ const storageForm = createKrizakaForm({
     retentionDays: "",
     quotaMb: "",
     quotaObjects: "",
+    scanTimeoutSeconds: "",
     octetStream: false,
     pdf: false,
     png: false,
@@ -63,6 +65,7 @@ export interface StorageSettingsFormProps {
     retentionDays: { label: string; hint: string };
     quotaMb: { label: string; hint: string };
     quotaObjects: { label: string; hint: string };
+    scanTimeoutSeconds: { label: string; hint: string };
     types: { legend: string; hint: string };
     save: string;
     saved: string;
@@ -75,6 +78,7 @@ export interface StorageSettingsFormProps {
     retentionDays: number;
     quotaMb: number;
     quotaObjects: number;
+    scanTimeoutSeconds: number;
     types: readonly string[];
   };
 }
@@ -85,6 +89,7 @@ const DEFAULTS_OF = (current: StorageSettingsFormProps["current"]) => ({
   retentionDays: String(current.retentionDays),
   quotaMb: String(current.quotaMb),
   quotaObjects: String(current.quotaObjects),
+  scanTimeoutSeconds: String(current.scanTimeoutSeconds),
   ...Object.fromEntries(Object.entries(TYPE_FIELDS).map(([field, type]) => [field, current.types.includes(type)])),
 });
 
@@ -99,11 +104,19 @@ function changesOf(values: Record<string, unknown>): Record<string, unknown> {
     "storage.retentionDays": Number(values.retentionDays),
     "storage.quotaMb": Number(values.quotaMb),
     "storage.quotaObjects": Number(values.quotaObjects),
+    "storage.scanTimeoutSeconds": Number(values.scanTimeoutSeconds),
     "storage.allowedTypes": types,
   };
 }
 
-const NUMBER_FIELDS = ["maxMb", "signedUrlSeconds", "retentionDays", "quotaMb", "quotaObjects"] as const;
+const NUMBER_FIELDS = [
+  "maxMb",
+  "signedUrlSeconds",
+  "retentionDays",
+  "quotaMb",
+  "quotaObjects",
+  "scanTimeoutSeconds",
+] as const;
 
 /** The administrator's storage settings on @krizaka/ui's form. The server checks the bounds and answers a refusal in the visitor's language. */
 export function StorageSettingsForm({ locale, labels, current }: Readonly<StorageSettingsFormProps>) {

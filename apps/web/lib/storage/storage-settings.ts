@@ -20,6 +20,7 @@ export const STORAGE_SETTING = {
   retentionDays: "storage.retentionDays",
   quotaMb: "storage.quotaMb",
   quotaObjects: "storage.quotaObjects",
+  scanTimeoutSeconds: "storage.scanTimeoutSeconds",
 } as const;
 
 /**
@@ -34,6 +35,8 @@ export const storageSettings = defineSettings({
   // What one product's tenant (the API's client) may keep: the API refuses a write past either, before any byte is stored.
   [STORAGE_SETTING.quotaMb]: integer(GROUP, 10_240, { min: 1, max: 1_048_576, unit: "MB" }, ["global"]),
   [STORAGE_SETTING.quotaObjects]: integer(GROUP, 100_000, { min: 1, max: 10_000_000 }, ["global"]),
+  // The longest the malware scanner may take on one file; past it the file stays in quarantine and the upload answers 503 (never published).
+  [STORAGE_SETTING.scanTimeoutSeconds]: integer(GROUP, 30, { min: 5, max: 120, unit: "s" }, ["global"]),
 } as const);
 
 export type StorageSettingsService = SettingsService<(typeof storageSettings)["registry"]>;
@@ -51,6 +54,8 @@ export interface StorageRules {
   /** What one API tenant may keep, in bytes and in objects. */
   quotaBytes: number;
   quotaObjects: number;
+  /** The longest a malware scan may take, in seconds. */
+  scanTimeoutSeconds: number;
 }
 
 /** Where a service reads the rules: asked on every upload and every link, so a change applies at once. */
@@ -59,14 +64,16 @@ export type StorageRulesSource = () => Promise<StorageRules>;
 /** The rules from the settings service (the database, with its short cache); a failed read fails the act, never falls back to a looser rule. */
 export function storageRulesOf(settings: Pick<StorageSettingsService, "get">): StorageRulesSource {
   return async () => {
-    const [maxMb, types, signedUrlSeconds, retentionDays, quotaMb, quotaObjects] = await Promise.all([
-      settings.get(STORAGE_SETTING.maxMb),
-      settings.get(STORAGE_SETTING.allowedTypes),
-      settings.get(STORAGE_SETTING.signedUrlSeconds),
-      settings.get(STORAGE_SETTING.retentionDays),
-      settings.get(STORAGE_SETTING.quotaMb),
-      settings.get(STORAGE_SETTING.quotaObjects),
-    ]);
+    const [maxMb, types, signedUrlSeconds, retentionDays, quotaMb, quotaObjects, scanTimeoutSeconds] =
+      await Promise.all([
+        settings.get(STORAGE_SETTING.maxMb),
+        settings.get(STORAGE_SETTING.allowedTypes),
+        settings.get(STORAGE_SETTING.signedUrlSeconds),
+        settings.get(STORAGE_SETTING.retentionDays),
+        settings.get(STORAGE_SETTING.quotaMb),
+        settings.get(STORAGE_SETTING.quotaObjects),
+        settings.get(STORAGE_SETTING.scanTimeoutSeconds),
+      ]);
     return {
       maxBytes: maxMb * BYTES_PER_MB,
       types,
@@ -74,6 +81,7 @@ export function storageRulesOf(settings: Pick<StorageSettingsService, "get">): S
       retentionDays,
       quotaBytes: quotaMb * BYTES_PER_MB,
       quotaObjects,
+      scanTimeoutSeconds,
     };
   };
 }

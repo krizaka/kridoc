@@ -67,6 +67,7 @@ describe("the storage settings of the administrator", () => {
       retentionDays: 3650,
       quotaBytes: 10_240 * MB,
       quotaObjects: 100_000,
+      scanTimeoutSeconds: 30,
     });
   });
 
@@ -133,6 +134,23 @@ describe("the storage settings of the administrator", () => {
     expect(await rules()).toMatchObject({ quotaBytes: 3 * MB, quotaObjects: 7 });
     expect((await admin.recent(ADMIN)).map((e) => e.targetId)).toEqual(
       expect.arrayContaining([STORAGE_SETTING.quotaMb, STORAGE_SETTING.quotaObjects]),
+    );
+  });
+
+  it("sets the scan timeout and the size within the hard maxima, for an administrator only, applied at once and audited", async () => {
+    for (const bad of [
+      { [STORAGE_SETTING.scanTimeoutSeconds]: 4 },
+      { [STORAGE_SETTING.scanTimeoutSeconds]: 121 },
+      { [STORAGE_SETTING.maxMb]: 101 },
+    ])
+      await expect(admin.change(ADMIN, bad)).rejects.toMatchObject({ code: STORAGE_ADMIN_ERROR.invalid });
+    await expect(admin.change(USER, { [STORAGE_SETTING.scanTimeoutSeconds]: 10 })).rejects.toMatchObject({
+      code: STORAGE_ADMIN_ERROR.forbidden,
+    });
+    await admin.change(ADMIN, { [STORAGE_SETTING.scanTimeoutSeconds]: 120, [STORAGE_SETTING.maxMb]: 100 });
+    expect(await rules()).toMatchObject({ scanTimeoutSeconds: 120, maxBytes: 100 * MB });
+    expect((await admin.recent(ADMIN)).map((e) => e.targetId)).toEqual(
+      expect.arrayContaining([STORAGE_SETTING.scanTimeoutSeconds, STORAGE_SETTING.maxMb]),
     );
   });
 });

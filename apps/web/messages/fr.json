@@ -67,6 +67,8 @@
       "NO_FILE": "Choisissez un fichier à envoyer.",
       "FILE_TOO_BIG": "Ce fichier est trop gros.",
       "FILE_TYPE_REFUSED": "Ce type de fichier n'est pas accepté.",
+      "FILE_INFECTED": "Ce fichier a été refusé : un virus y a été trouvé.",
+      "SCANNER_UNAVAILABLE": "Le fichier n'a pas pu être vérifié pour le moment. Rien n'a été conservé comme document : réessayez dans un instant.",
       "UNAUTHENTICATED": "Connectez-vous pour continuer.",
       "INTERNAL": "Une erreur est survenue de notre côté. Réessayez plus tard."
     }
@@ -114,6 +116,10 @@
     "quotaObjects": {
       "label": "Objets par espace de produit",
       "hint": "Le plus d'objets qu'un espace de produit peut garder. Entre {min} et {max}."
+    },
+    "scanTimeoutSeconds": {
+      "label": "Délai de l'analyse antivirus (secondes)",
+      "hint": "Le temps maximal de l'analyse d'un fichier ; au-delà, le fichier reste en quarantaine et l'envoi est refusé pour l'instant. Entre {min} et {max}."
     },
     "types": {
       "legend": "Types de contenu acceptés",

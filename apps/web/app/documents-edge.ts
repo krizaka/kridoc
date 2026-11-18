@@ -6,11 +6,12 @@ import { tokenOfRequest } from "@/lib/auth/session-cookie";
 import { databaseOf } from "@/lib/db/connection";
 import { createDocumentStore } from "@/lib/db/document-store";
 import { type Env, readEnv } from "@/lib/env";
+import { documentScannerOf } from "@/lib/storage/document-scanner";
 import { createDocumentService, type DocumentService } from "@/lib/storage/document-service";
 import { ownerObjectsOf } from "@/lib/storage/document-vault";
 import { DOCUMENT_ERROR, DocumentError } from "@/lib/storage/errors";
 import { documentRefusal } from "@/lib/storage/http";
-import { objectStoreOf, platformFetch } from "@/lib/storage/object-store";
+import { objectStoreOf, platformFetch, quarantineStoreOf } from "@/lib/storage/object-store";
 import type { StorageRulesSource } from "@/lib/storage/storage-settings";
 
 import { accountsRuntime } from "./accounts-edge";
@@ -32,9 +33,14 @@ export function documentsRuntime(env: Env = readEnv()): DocumentsRuntime {
   const { sessions } = accountsRuntime(env);
   const { query } = databaseOf(env);
   const rules = storageRulesFor(env);
+  const storage = storageConfigOf(env);
+  const adapters = { fetch: platformFetch, clock: systemClock };
+  const quarantine = quarantineStoreOf(storage, adapters);
   const service = createDocumentService({
     documents: createDocumentStore(query),
-    objects: ownerObjectsOf(objectStoreOf(storageConfigOf(env), { fetch: platformFetch, clock: systemClock }), {
+    quarantine,
+    scanner: documentScannerOf({ host: env.MEDIA_SCAN_CLAMD_HOST, port: env.MEDIA_SCAN_CLAMD_PORT }, quarantine),
+    objects: ownerObjectsOf(objectStoreOf(storage, adapters), {
       rootKey: vaultRootKeyOf(env),
       keys: dbTenantKeyStore(query),
       clock: systemClock,

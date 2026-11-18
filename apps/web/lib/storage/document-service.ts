@@ -1,16 +1,26 @@
-import { sniffType, STORAGE_CODE, StorageError } from "@krizaka/storage";
+import { type MalwareScanner, type ObjectStore, STORAGE_CODE, StorageError } from "@krizaka/storage";
 import { z } from "zod";
 
+import {
+  INTAKE_OUTCOME,
+  type IntakeOutcome,
+  quarantineKeyOf,
+  type ScreenedFile,
+  screenQuarantined,
+} from "./document-intake";
 import type { DocumentRecord, DocumentStore, OwnerObjects } from "./document-port";
 import { accountTenantOf } from "./document-vault";
 import { DOCUMENT_ERROR, DocumentError } from "./errors";
 import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
-import type { StorageRules, StorageRulesSource } from "./storage-settings";
+import type { StorageRulesSource } from "./storage-settings";
 
 export interface DocumentServiceDeps {
   documents: DocumentStore;
   /** The bytes, one sealed store per owner (envelope encryption per account, lib/storage/document-vault.ts). */
   objects: OwnerObjects;
+  /** The quarantine every upload lands in first, and the scanner that clears it (clamd locally, GuardDuty later): nothing is a document before the scan. */
+  quarantine: ObjectStore;
+  scanner: MalwareScanner;
   newId: () => string;
   /** The administrator's rules (size, and the types the BYTES may be by magic number), read on every upload: a change applies at once. */
   rules: StorageRulesSource;
@@ -50,22 +60,24 @@ export const documentView = (record: DocumentRecord): DocumentView => ({
   createdAt: record.createdAt.toISOString(),
 });
 
-const titleOf = (file: DocumentFile): string =>
+const titleOf = (file: Omit<DocumentFile, "bytes">): string =>
   (file.title?.trim() || file.name.trim() || UNTITLED).slice(0, TITLE_MAX);
 
 const notFound = () => new DocumentError(DOCUMENT_ERROR.notFound);
 const isId = (id: string): boolean => z.uuid().safeParse(id).success;
 
-/** The type of a file's bytes when the rules accept them. */
-function acceptedType(bytes: Uint8Array, rules: StorageRules): string {
-  if (bytes.byteLength === 0 || bytes.byteLength > rules.maxBytes) throw new DocumentError(DOCUMENT_ERROR.tooBig);
-  const type = sniffType(bytes);
-  if (type === null || !rules.types.includes(type)) throw new DocumentError(DOCUMENT_ERROR.badType);
-  return type;
-}
-
 export interface DocumentService {
+  /**
+   * The intake: the bytes land in the quarantine, then size (HEAD, before any read), type by magic number, scan, seal and copy to the owner's
+   * documents, quarantine deleted. @throws DocumentError `FILE_TOO_BIG`, `FILE_TYPE_REFUSED`, `FILE_INFECTED` (refused and gone),
+   * `SCANNER_UNAVAILABLE` (503: kept in quarantine, never published)
+   */
   upload(ownerId: string, file: DocumentFile): Promise<DocumentRecord>;
+  /**
+   * The same intake for a file that is already in the owner's quarantine under `id` (a direct upload to the quarantine, bounded by the provider):
+   * the size is read from a HEAD before any byte is read. Same refusals as `upload`.
+   */
+  admit(ownerId: string, id: string, file: Omit<DocumentFile, "bytes">): Promise<DocumentRecord>;
   list(ownerId: string): Promise<DocumentRecord[]>;
   /** @throws DocumentError `DOCUMENT_NOT_FOUND` for a document that is not the owner's: another's is not even named. */
   read(ownerId: string, id: string): Promise<{ record: DocumentRecord; bytes: Uint8Array }>;
@@ -102,6 +114,48 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
       keyHash: keyHashOf(objectKeyOf(id)),
       ...(size === undefined ? {} : { detail: { size } }),
     });
+  const noteIntake = (ownerId: string, id: string) => async (outcome: IntakeOutcome, code: string) =>
+    deps.audit({
+      action: outcome === INTAKE_OUTCOME.held ? STORAGE_AUDIT.intakeHeld : STORAGE_AUDIT.intakeRefused,
+      actor: { kind: AUDIT_ACTOR.account, id: ownerId },
+      tenantId: accountTenantOf(ownerId),
+      keyHash: keyHashOf(objectKeyOf(id)),
+      detail: { code },
+    });
+  /** Seals the screened bytes under the owner's key into the documents and records them; no metadata, no bytes: a failed insert leaves nothing behind. */
+  const seal = async (
+    ownerId: string,
+    id: string,
+    file: Omit<DocumentFile, "bytes">,
+    screened: ScreenedFile,
+  ): Promise<DocumentRecord> => {
+    const objects = deps.objects.of(ownerId);
+    await objects.put(objectKeyOf(id), screened.bytes, { contentType: screened.mediaType });
+    try {
+      return await deps.documents.add({
+        id,
+        ownerId,
+        title: titleOf(file),
+        mediaType: screened.mediaType,
+        sizeBytes: screened.bytes.byteLength,
+      });
+    } catch (error) {
+      await objects.delete(objectKeyOf(id));
+      throw error;
+    }
+  };
+  /** The checks of the intake on what waits in the owner's quarantine under `id`, then the seal into the documents and the quarantine's deletion. */
+  const admit = async (ownerId: string, id: string, file: Omit<DocumentFile, "bytes">): Promise<DocumentRecord> => {
+    const pending = quarantineKeyOf(ownerId, id);
+    const screened = await screenQuarantined(
+      { quarantine: deps.quarantine, scanner: deps.scanner, rules: deps.rules, note: noteIntake(ownerId, id) },
+      pending,
+    );
+    const record = await seal(ownerId, id, file, screened);
+    await deps.quarantine.delete(pending);
+    await note(STORAGE_AUDIT.uploaded, ownerId, id, screened.bytes.byteLength);
+    return record;
+  };
   const ownRecord = async (ownerId: string, id: string): Promise<DocumentRecord> => {
     const record = isId(id) ? await deps.documents.findForOwner(ownerId, id) : null;
     if (!record) throw notFound();
@@ -109,28 +163,15 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
   };
   return {
     async upload(ownerId, file) {
-      const mediaType = acceptedType(file.bytes, await deps.rules());
       const id = deps.newId();
-      const key = objectKeyOf(id);
-      const objects = deps.objects.of(ownerId);
-      await objects.put(key, file.bytes, { contentType: mediaType });
-      let record: DocumentRecord;
-      try {
-        record = await deps.documents.add({
-          id,
-          ownerId,
-          title: titleOf(file),
-          mediaType,
-          sizeBytes: file.bytes.byteLength,
-        });
-      } catch (error) {
-        // No metadata, no bytes: a failed insert leaves nothing behind.
-        await objects.delete(key);
-        throw error;
-      }
-      await note(STORAGE_AUDIT.uploaded, ownerId, id, file.bytes.byteLength);
-      return record;
+      const rules = await deps.rules();
+      // The byte count is known before anything is written: a file already too big never enters the quarantine.
+      if (file.bytes.byteLength === 0 || file.bytes.byteLength > rules.maxBytes)
+        throw new DocumentError(DOCUMENT_ERROR.tooBig);
+      await deps.quarantine.put(quarantineKeyOf(ownerId, id), file.bytes, { contentType: "application/octet-stream" });
+      return admit(ownerId, id, file);
     },
+    admit: (ownerId, id, file) => admit(ownerId, id, file),
     list: (ownerId) => deps.documents.listByOwner(ownerId),
     async read(ownerId, id) {
       const record = await ownRecord(ownerId, id);

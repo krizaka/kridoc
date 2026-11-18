@@ -74,6 +74,9 @@ export const envSchema = z.object({
   /** The bucket's key, scoped to that bucket: secrets. */
   MEDIA_S3_ACCESS_KEY_ID: z.string().optional(),
   MEDIA_S3_SECRET_ACCESS_KEY: z.string().optional(),
+  /** The ClamAV daemon that scans every upload in quarantine (`clamav`, its port 3310 by default). Unset: no upload ever leaves the quarantine (fail closed). */
+  MEDIA_SCAN_CLAMD_HOST: z.string().optional(),
+  MEDIA_SCAN_CLAMD_PORT: z.coerce.number().int().min(1).max(65_535).default(3310),
   /** The header the edge sets with the client's address (`do-connecting-ip` on DigitalOcean App Platform). */
   ABUSE_CLIENT_IP_HEADER: z.string().default("do-connecting-ip"),
   /** How many trusted proxies append to X-Forwarded-For. */
