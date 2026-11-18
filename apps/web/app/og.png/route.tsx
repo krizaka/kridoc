@@ -10,10 +10,11 @@ export const dynamic = "force-static";
 
 const SIZE = { width: 1200, height: 630 } as const;
 
-export function GET() {
+export async function GET() {
   const fr = getDictionary("fr").home;
   const en = getDictionary("en").home;
   const c = values.dark;
+  const mark = await brandMarkSource();
   return new ImageResponse(
     <div
       style={{
@@ -33,7 +34,7 @@ export function GET() {
           style={{
             width: 128,
             height: 128,
-            backgroundImage: `url(${brandMarkSource()})`,
+            backgroundImage: `url(${mark})`,
             backgroundSize: "128px 128px",
             backgroundRepeat: "no-repeat",
           }}

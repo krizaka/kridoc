@@ -27,7 +27,7 @@ describe("the Kridoc logo", () => {
   });
 
   it("is on the social card", async () => {
-    const res = socialCard();
+    const res = await socialCard();
     expect(res.headers.get("content-type")).toBe("image/png");
     expect((await res.arrayBuffer()).byteLength).toBeGreaterThan(5000);
   });
