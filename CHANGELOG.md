@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/krizaka/kridoc/compare/v0.13.0...v0.13.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **brand:** kridoc.com shows the new Kridoc logo, from the latest @krizaka/ui ([#84](https://github.com/krizaka/kridoc/issues/84)) ([8ba3538](https://github.com/krizaka/kridoc/commit/8ba3538f55ae5d1f4650fa38eaff54be9f8c2a87))
+
 ## [0.13.0](https://github.com/krizaka/kridoc/compare/v0.12.2...v0.13.0) (2026-11-18)
 
 
