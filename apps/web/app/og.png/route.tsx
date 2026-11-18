@@ -3,16 +3,18 @@
 import { values } from "@krizaka/tokens";
 import { ImageResponse } from "next/og";
 
+import { brandMarkSource } from "@/lib/brand-mark";
 import { getDictionary } from "@/lib/i18n";
 
 export const dynamic = "force-static";
 
 const SIZE = { width: 1200, height: 630 } as const;
 
-export function GET() {
+export async function GET() {
   const fr = getDictionary("fr").home;
   const en = getDictionary("en").home;
   const c = values.dark;
+  const mark = await brandMarkSource();
   return new ImageResponse(
     <div
       style={{
@@ -27,7 +29,18 @@ export function GET() {
         color: c.textPrimary,
       }}
     >
-      <div style={{ fontSize: 112, fontWeight: 700 }}>{fr.title}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 32, fontSize: 112, fontWeight: 700 }}>
+        <div
+          style={{
+            width: 128,
+            height: 128,
+            backgroundImage: `url(${mark})`,
+            backgroundSize: "128px 128px",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+        {fr.title}
+      </div>
       <div style={{ fontSize: 44, color: c.textSecondary }}>{fr.lead}</div>
       <div style={{ fontSize: 32, color: c.textMuted }}>{en.lead}</div>
       <div
