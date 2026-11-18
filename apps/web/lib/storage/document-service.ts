@@ -101,61 +101,79 @@ async function bytesOf(objects: OwnerObjects, ownerId: string, id: string): Prom
   }
 }
 
+/** One audit line of a document: who, which tenant, the key's hash and the detail (sizes and codes, never content). */
+const noteOf = (
+  deps: DocumentServiceDeps,
+  action: StorageAuditAction,
+  ownerId: string,
+  id: string,
+  detail?: Readonly<Record<string, number | string>>,
+) =>
+  deps.audit({
+    action,
+    actor: { kind: AUDIT_ACTOR.account, id: ownerId },
+    tenantId: accountTenantOf(ownerId),
+    keyHash: keyHashOf(objectKeyOf(id)),
+    ...(detail === undefined ? {} : { detail }),
+  });
+
+/** Seals the screened bytes under the owner's key into the documents and records them; no metadata, no bytes: a failed insert leaves nothing behind. */
+async function seal(
+  deps: DocumentServiceDeps,
+  ownerId: string,
+  id: string,
+  file: Omit<DocumentFile, "bytes">,
+  screened: ScreenedFile,
+): Promise<DocumentRecord> {
+  const objects = deps.objects.of(ownerId);
+  await objects.put(objectKeyOf(id), screened.bytes, { contentType: screened.mediaType });
+  try {
+    return await deps.documents.add({
+      id,
+      ownerId,
+      title: titleOf(file),
+      mediaType: screened.mediaType,
+      sizeBytes: screened.bytes.byteLength,
+    });
+  } catch (error) {
+    await objects.delete(objectKeyOf(id));
+    throw error;
+  }
+}
+
+/** The checks of the intake on what waits in the owner's quarantine under `id`, then the seal into the documents and the quarantine's deletion. */
+async function admitQuarantined(
+  deps: DocumentServiceDeps,
+  ownerId: string,
+  id: string,
+  file: Omit<DocumentFile, "bytes">,
+): Promise<DocumentRecord> {
+  const pending = quarantineKeyOf(ownerId, id);
+  const note = async (outcome: IntakeOutcome, code: string) =>
+    noteOf(
+      deps,
+      outcome === INTAKE_OUTCOME.held ? STORAGE_AUDIT.intakeHeld : STORAGE_AUDIT.intakeRefused,
+      ownerId,
+      id,
+      { code },
+    );
+  const screened = await screenQuarantined(
+    { quarantine: deps.quarantine, scanner: deps.scanner, rules: deps.rules, note },
+    pending,
+  );
+  const record = await seal(deps, ownerId, id, file, screened);
+  await deps.quarantine.delete(pending);
+  await noteOf(deps, STORAGE_AUDIT.uploaded, ownerId, id, { size: screened.bytes.byteLength });
+  return record;
+}
+
 /**
  * Kridoc's own documents: the metadata in the database (`DocumentStore`), the bytes in each owner's sealed store (`OwnerObjects`).
  * Every read starts from the owner's metadata, so a person reaches only their own documents. Ports in, typed `DocumentError` out.
  */
 export function createDocumentService(deps: DocumentServiceDeps): DocumentService {
   const note = (action: StorageAuditAction, ownerId: string, id: string, size?: number) =>
-    deps.audit({
-      action,
-      actor: { kind: AUDIT_ACTOR.account, id: ownerId },
-      tenantId: accountTenantOf(ownerId),
-      keyHash: keyHashOf(objectKeyOf(id)),
-      ...(size === undefined ? {} : { detail: { size } }),
-    });
-  const noteIntake = (ownerId: string, id: string) => async (outcome: IntakeOutcome, code: string) =>
-    deps.audit({
-      action: outcome === INTAKE_OUTCOME.held ? STORAGE_AUDIT.intakeHeld : STORAGE_AUDIT.intakeRefused,
-      actor: { kind: AUDIT_ACTOR.account, id: ownerId },
-      tenantId: accountTenantOf(ownerId),
-      keyHash: keyHashOf(objectKeyOf(id)),
-      detail: { code },
-    });
-  /** Seals the screened bytes under the owner's key into the documents and records them; no metadata, no bytes: a failed insert leaves nothing behind. */
-  const seal = async (
-    ownerId: string,
-    id: string,
-    file: Omit<DocumentFile, "bytes">,
-    screened: ScreenedFile,
-  ): Promise<DocumentRecord> => {
-    const objects = deps.objects.of(ownerId);
-    await objects.put(objectKeyOf(id), screened.bytes, { contentType: screened.mediaType });
-    try {
-      return await deps.documents.add({
-        id,
-        ownerId,
-        title: titleOf(file),
-        mediaType: screened.mediaType,
-        sizeBytes: screened.bytes.byteLength,
-      });
-    } catch (error) {
-      await objects.delete(objectKeyOf(id));
-      throw error;
-    }
-  };
-  /** The checks of the intake on what waits in the owner's quarantine under `id`, then the seal into the documents and the quarantine's deletion. */
-  const admit = async (ownerId: string, id: string, file: Omit<DocumentFile, "bytes">): Promise<DocumentRecord> => {
-    const pending = quarantineKeyOf(ownerId, id);
-    const screened = await screenQuarantined(
-      { quarantine: deps.quarantine, scanner: deps.scanner, rules: deps.rules, note: noteIntake(ownerId, id) },
-      pending,
-    );
-    const record = await seal(ownerId, id, file, screened);
-    await deps.quarantine.delete(pending);
-    await note(STORAGE_AUDIT.uploaded, ownerId, id, screened.bytes.byteLength);
-    return record;
-  };
+    noteOf(deps, action, ownerId, id, size === undefined ? undefined : { size });
   const ownRecord = async (ownerId: string, id: string): Promise<DocumentRecord> => {
     const record = isId(id) ? await deps.documents.findForOwner(ownerId, id) : null;
     if (!record) throw notFound();
@@ -169,9 +187,9 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
       if (file.bytes.byteLength === 0 || file.bytes.byteLength > rules.maxBytes)
         throw new DocumentError(DOCUMENT_ERROR.tooBig);
       await deps.quarantine.put(quarantineKeyOf(ownerId, id), file.bytes, { contentType: "application/octet-stream" });
-      return admit(ownerId, id, file);
+      return admitQuarantined(deps, ownerId, id, file);
     },
-    admit: (ownerId, id, file) => admit(ownerId, id, file),
+    admit: (ownerId, id, file) => admitQuarantined(deps, ownerId, id, file),
     list: (ownerId) => deps.documents.listByOwner(ownerId),
     async read(ownerId, id) {
       const record = await ownRecord(ownerId, id);

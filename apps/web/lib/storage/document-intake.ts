@@ -46,10 +46,13 @@ export async function screenQuarantined(deps: IntakeDeps, key: string): Promise<
   const mediaType = sniffType(found.bytes);
   if (mediaType === null || !rules.types.includes(mediaType)) return refuse(DOCUMENT_ERROR.badType);
   const verdict = await deps.scanner.scan({ key }, { timeoutMs: rules.scanTimeoutSeconds * 1000 });
-  if (verdict.status === "infected") return refuse(DOCUMENT_ERROR.infected);
-  if (verdict.status === "error") {
-    await deps.note(INTAKE_OUTCOME.held, DOCUMENT_ERROR.scannerUnavailable);
-    throw new DocumentError(DOCUMENT_ERROR.scannerUnavailable);
+  switch (verdict.status) {
+    case "infected":
+      return refuse(DOCUMENT_ERROR.infected);
+    case "error":
+      await deps.note(INTAKE_OUTCOME.held, DOCUMENT_ERROR.scannerUnavailable);
+      throw new DocumentError(DOCUMENT_ERROR.scannerUnavailable);
+    case "clean":
+      return { bytes: found.bytes, mediaType };
   }
-  return { bytes: found.bytes, mediaType };
 }

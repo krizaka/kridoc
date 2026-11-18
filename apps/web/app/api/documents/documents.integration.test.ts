@@ -13,7 +13,7 @@ import { connectionOf, pool } from "@/lib/db/connection";
 import { integrationPools } from "@/lib/db/integration-pool";
 import { migrateDatabase } from "@/lib/db/migrations";
 import { accountTenantOf } from "@/lib/storage/document-vault";
-import { type IntakeServices, startIntakeServices } from "@/lib/storage/intake-services";
+import { type IntakeServices, startIntakeServices } from "@/tests/intake-services";
 
 import { documentsRuntime } from "../../documents-edge";
 import { DELETE as deleteOne, GET as readOne } from "./[id]/route";

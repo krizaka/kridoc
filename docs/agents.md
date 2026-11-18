@@ -71,7 +71,7 @@ every string in `messages/*.json`, `@krizaka/ui` blocks, tests with every change
   `FILE_TYPE_REFUSED` 415). Scanner down, slow or confused: the file **stays in quarantine** and the answer is `SCANNER_UNAVAILABLE` 503. Each refusal
   or hold is one audit line (`storage.intake.refused|held`, the code, no content). The scan timeout is the administrator's setting
   `storage.scanTimeoutSeconds` (5-120 s, default 30; the size is `storage.maxMb`, 1-100). The journey runs on a real S3 server and ClamAV
-  (`lib/storage/intake-services.ts`: official images pinned by digest, started with the Docker CLI; never skipped).
+  (`tests/intake-services.ts`: official images pinned by digest, started with the Docker CLI; never skipped).
   ClamAV flags EICAR only as a plain file, which the intake refuses by type first; the scan step is proved with a marker signature inside a PDF.
 - `dev-preview.json` is data: `devPreview` is claimed only when every criterion has fresh evidence.
 

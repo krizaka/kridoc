@@ -4,10 +4,11 @@ import { bucketStore, memoryTenantKeyStore, type ObjectStore, scanDaemon } from 
 import { tcpScanTransport } from "@krizaka/storage/node";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { INTAKE_S3_KEYS, type IntakeServices, startIntakeServices, TEST_MARKER } from "@/tests/intake-services";
+
 import { quarantineKeyOf } from "./document-intake";
 import { createDocumentService, type DocumentService } from "./document-service";
 import { ownerObjectsOf } from "./document-vault";
-import { INTAKE_S3_KEYS, type IntakeServices, startIntakeServices, TEST_MARKER } from "./intake-services";
 import { memoryDocumentStore } from "./memory-document-store";
 import { platformFetch } from "./object-store";
 import type { StorageAuditLine } from "./storage-audit";
