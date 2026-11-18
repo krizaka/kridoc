@@ -3,12 +3,13 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { memoryTenantKeyStore, type ObjectStore } from "@krizaka/storage";
+import { memoryMalwareScanner, memoryObjectStore, memoryTenantKeyStore, type ObjectStore } from "@krizaka/storage";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { DocumentRecord, DocumentStore, NewDocument, OwnerObjects } from "./document-port";
+import type { OwnerObjects } from "./document-port";
 import { createDocumentService, type DocumentService, documentView, objectKeyOf } from "./document-service";
 import { accountTenantOf, ownerObjectsOf } from "./document-vault";
+import { memoryDocumentStore } from "./memory-document-store";
 import { objectStoreOf } from "./object-store";
 import { STORAGE_PROVIDER } from "./providers";
 import type { StorageAuditLine } from "./storage-audit";
@@ -26,37 +27,13 @@ const RULES: StorageRules = {
   retentionDays: 365,
   quotaBytes: 1_000_000,
   quotaObjects: 1000,
+  scanTimeoutSeconds: 30,
 };
-
-/** The metadata port in memory, with the same owner rule as the SQL adapter (lib/db/document-store.ts, tested on PostgreSQL). */
-function memoryDocumentStore(): DocumentStore & { failNextAdd(): void } {
-  const rows = new Map<string, DocumentRecord>();
-  let fail = false;
-  return {
-    failNextAdd: () => {
-      fail = true;
-    },
-    async add(document: NewDocument) {
-      if (fail) {
-        fail = false;
-        throw new Error("the database refused the insert");
-      }
-      const record = { ...document, id: document.id ?? `id-${rows.size}`, createdAt: AT };
-      rows.set(record.id, record);
-      return record;
-    },
-    listByOwner: async (ownerId) => [...rows.values()].filter((r) => r.ownerId === ownerId),
-    findForOwner: async (ownerId, id) => (rows.get(id)?.ownerId === ownerId ? rows.get(id)! : null),
-    async removeForOwner(ownerId, id) {
-      if (rows.get(id)?.ownerId !== ownerId) return false;
-      return rows.delete(id);
-    },
-  };
-}
 
 describe("Kridoc's documents on the local adapter", () => {
   let root: string;
   let bucket: ObjectStore;
+  let quarantine: ReturnType<typeof memoryObjectStore>;
   let objects: OwnerObjects;
   let documents: ReturnType<typeof memoryDocumentStore>;
   let service: DocumentService;
@@ -85,9 +62,12 @@ describe("Kridoc's documents on the local adapter", () => {
     ids = 0;
     rules = RULES;
     audit = [];
+    quarantine = memoryObjectStore();
     service = createDocumentService({
       documents,
       objects,
+      quarantine,
+      scanner: memoryMalwareScanner(quarantine),
       newId: () => `00000000-0000-4000-8000-1000000000${String(++ids).padStart(2, "0")}`,
       rules: async () => rules,
       audit: async (line) => {
@@ -179,6 +159,8 @@ describe("Kridoc's documents on the local adapter", () => {
     const small = createDocumentService({
       documents,
       objects,
+      quarantine,
+      scanner: memoryMalwareScanner(quarantine),
       newId: () => "00000000-0000-4000-8000-200000000001",
       rules: async () => ({ ...rules, maxBytes: 8 }),
       audit: async () => {},

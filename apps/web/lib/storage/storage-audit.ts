@@ -5,6 +5,8 @@ export const STORAGE_AUDIT = {
   issued: "storage.client.issued",
   revoked: "storage.client.revoked",
   uploaded: "storage.uploaded",
+  intakeRefused: "storage.intake.refused",
+  intakeHeld: "storage.intake.held",
   read: "storage.read",
   head: "storage.object.head",
   listed: "storage.object.listed",

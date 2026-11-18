@@ -13,6 +13,7 @@ import { connectionOf, pool } from "@/lib/db/connection";
 import { integrationPools } from "@/lib/db/integration-pool";
 import { migrateDatabase } from "@/lib/db/migrations";
 import { accountTenantOf } from "@/lib/storage/document-vault";
+import { type IntakeServices, startIntakeServices } from "@/tests/intake-services";
 
 import { documentsRuntime } from "../../documents-edge";
 import { DELETE as deleteOne, GET as readOne } from "./[id]/route";
@@ -33,6 +34,7 @@ describe("Kridoc's documents through the routes", () => {
   const { poolOn, all } = integrationPools(url);
   let testDatabase: TestDatabase;
   let root: string;
+  let scanner: IntakeServices;
   const cookie: Record<string, string> = {};
 
   const as = (who: string | null, init: RequestInit = {}) =>
@@ -50,6 +52,8 @@ describe("Kridoc's documents through the routes", () => {
     const target = new URL(url!);
     target.pathname = `/${testDatabase.name}`;
     root = await mkdtemp(join(tmpdir(), "kridoc-journey-"));
+    // The real ClamAV daemon every upload is scanned by (the S3 server of the same kit is not used here: the folder adapter is).
+    scanner = await startIntakeServices([]);
     for (const [key, value] of Object.entries({
       MEDIA_STORAGE_ENABLED: "on",
       MEDIA_STORAGE_PROVIDER: "local",
@@ -60,6 +64,8 @@ describe("Kridoc's documents through the routes", () => {
       DATABASE_URL: target.toString(),
       AUTH_SESSION_SECRET: SECRET,
       MEDIA_VAULT_KEY: randomBytes(32).toString("base64"),
+      MEDIA_SCAN_CLAMD_HOST: scanner.clamd.host,
+      MEDIA_SCAN_CLAMD_PORT: String(scanner.clamd.port),
     }))
       vi.stubEnv(key, value);
     const db = poolOn(testDatabase.name);
@@ -75,14 +81,26 @@ describe("Kridoc's documents through the routes", () => {
       ["b", B],
     ] as const)
       cookie[who] = (await sessions.create(id, { ip: null, userAgent: "vitest" })).token;
-  });
+  }, 300_000);
 
   afterAll(async () => {
     vi.unstubAllEnvs();
+    scanner?.stop();
     await endPool(pool({ DATABASE_URL: url }));
     for (const made of all()) await endPool(made);
     await testDatabase?.drop();
     await rm(root, { recursive: true, force: true });
+  });
+
+  it("answers 503 and keeps nothing as a document while the scanner cannot answer", async () => {
+    vi.stubEnv("MEDIA_SCAN_CLAMD_PORT", "1");
+    const form = new FormData();
+    form.set("file", new File([PDF], "bail.pdf", { type: "application/pdf" }));
+    const held = await upload(new Request(BASE, as("a", { method: "POST", body: form })));
+    expect(held.status).toBe(503);
+    expect((await held.json()).code).toBe("SCANNER_UNAVAILABLE");
+    expect((await (await list(new Request(BASE, as("a")))).json()).documents).toEqual([]);
+    vi.stubEnv("MEDIA_SCAN_CLAMD_PORT", String(scanner.clamd.port));
   });
 
   it("keeps A's document, gives it to A only, and deletes it for A only", async () => {

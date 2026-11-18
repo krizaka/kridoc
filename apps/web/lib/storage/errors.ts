@@ -5,6 +5,8 @@ export const DOCUMENT_ERROR = {
   noFile: "NO_FILE",
   tooBig: "FILE_TOO_BIG",
   badType: "FILE_TYPE_REFUSED",
+  infected: "FILE_INFECTED",
+  scannerUnavailable: "SCANNER_UNAVAILABLE",
   unauthenticated: "UNAUTHENTICATED",
   internal: "INTERNAL",
 } as const;
@@ -16,6 +18,8 @@ export const DOCUMENT_STATUS: Readonly<Record<DocumentErrorCode, number>> = {
   NO_FILE: 400,
   FILE_TOO_BIG: 413,
   FILE_TYPE_REFUSED: 415,
+  FILE_INFECTED: 422,
+  SCANNER_UNAVAILABLE: 503,
   UNAUTHENTICATED: 401,
   INTERNAL: 500,
 };

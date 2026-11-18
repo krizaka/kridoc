@@ -37,3 +37,11 @@ export function objectStoreOf(config: StorageConfig, deps: { fetch: FetchLike; c
     ...deps,
   });
 }
+
+/**
+ * The quarantine of the same installation: a store of its own (a folder beside the documents', or the bucket prefix `t/<tenant>-quarantine/`) where
+ * an upload waits for its checks. Nothing else reads it, and the bucket's lifecycle expires it after a day.
+ */
+export function quarantineStoreOf(config: StorageConfig, deps: { fetch: FetchLike; clock: Clock }): ObjectStore {
+  return objectStoreOf({ ...config, tenant: `${config.tenant}-quarantine` }, deps);
+}

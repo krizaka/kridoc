@@ -32,6 +32,7 @@ const DEFAULT_RULES: StorageRules = {
   retentionDays: 365,
   quotaBytes: 10_000,
   quotaObjects: 100,
+  scanTimeoutSeconds: 30,
 };
 let rules: StorageRules = DEFAULT_RULES;
 
