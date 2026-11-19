@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.2](https://github.com/krizaka/kridoc/compare/v0.13.1...v0.13.2) (2026-11-19)
+
+
+### Bug Fixes
+
+* **security:** workflow tokens are read-only by default ([#88](https://github.com/krizaka/kridoc/issues/88)) ([a7b9f39](https://github.com/krizaka/kridoc/commit/a7b9f39460914d1c089119f29ea5ba6fa4d18dfd))
+
 ## [0.13.1](https://github.com/krizaka/kridoc/compare/v0.13.0...v0.13.1) (2026-11-18)
 
 
