@@ -3,8 +3,8 @@ import { randomBytes } from "node:crypto";
 import { memoryObjectStore, memoryTenantKeyStore, type ObjectStore } from "@krizaka/storage";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { documentKeyOf } from "./document-address";
 import type { OwnerObjects } from "./document-port";
-import { objectKeyOf } from "./document-service";
 import { accountTenantOf, ownerObjectsOf } from "./document-vault";
 import type { RetentionStore, SweepCursor, SweepDocument } from "./retention-port";
 import { type SweepDeps, sweepStorage } from "./retention-sweep";
@@ -65,7 +65,7 @@ describe("the retention sweep", () => {
   };
 
   const put = (ownerId: string, id: string) =>
-    objects.of(ownerId).put(objectKeyOf(id), PDF, { contentType: "application/pdf" });
+    objects.of(ownerId).put(documentKeyOf(id), PDF, { contentType: "application/pdf" });
   const keysOf = async (ownerId: string) => (await objects.of(ownerId).list("")).map((o) => o.key).sort();
 
   beforeEach(() => {
@@ -113,7 +113,7 @@ describe("the retention sweep", () => {
     const result = await sweepStorage(deps);
     expect(result.expired).toBe(1);
     expect(rows.map((r) => r.id)).toEqual([doc(2)]);
-    expect(await keysOf(owner(1))).toEqual([objectKeyOf(doc(2))]);
+    expect(await keysOf(owner(1))).toEqual([documentKeyOf(doc(2))]);
   });
 
   it("follows a retention that was lowered since the last run", async () => {
@@ -130,7 +130,7 @@ describe("the retention sweep", () => {
     await objects.of(owner(1)).put("avatars/me.png", PDF, { contentType: "application/pdf" });
     const result = await sweepStorage(deps);
     expect(result.orphans).toBe(1);
-    expect(await keysOf(owner(1))).toEqual(["avatars/me.png", objectKeyOf(doc(1))]);
+    expect(await keysOf(owner(1))).toEqual(["avatars/me.png", documentKeyOf(doc(1))]);
     expect(audit.find((l) => l.detail?.reason === "orphan")).toMatchObject({ action: "storage.deleted" });
   });
 
@@ -144,7 +144,7 @@ describe("the retention sweep", () => {
       return original(ownerId, ids);
     };
     expect((await sweepStorage(deps)).orphans).toBe(0);
-    expect(await keysOf(owner(1))).toEqual([objectKeyOf(doc(9))]);
+    expect(await keysOf(owner(1))).toEqual([documentKeyOf(doc(9))]);
   });
 
   it("is bounded: at most the limit of expired documents per run, the rest at the next", async () => {
@@ -162,7 +162,7 @@ describe("the retention sweep", () => {
     deps.limits = { ...deps.limits, owners: 2 };
     expect((await sweepStorage(deps)).owners).toBe(2);
     expect(cursorValue).toBe(owner(2));
-    expect(await keysOf(owner(3))).toEqual([objectKeyOf(doc(3))]);
+    expect(await keysOf(owner(3))).toEqual([documentKeyOf(doc(3))]);
     expect((await sweepStorage(deps)).owners).toBe(1);
     expect(cursorValue).toBeNull();
     expect(await keysOf(owner(3))).toEqual([]);
@@ -200,7 +200,7 @@ describe("the retention sweep", () => {
     await expect(sweepStorage(deps)).rejects.toThrow("database");
     // doc(2) is older and went first (row and bytes); doc(1) is where the run stopped, whole.
     expect(rows.map((r) => r.id)).toEqual([doc(1)]);
-    expect(await keysOf(owner(1))).toEqual([objectKeyOf(doc(1))]);
+    expect(await keysOf(owner(1))).toEqual([documentKeyOf(doc(1))]);
     await sweepStorage(deps);
     expect(rows).toHaveLength(0);
     expect(await keysOf(owner(1))).toEqual([]);

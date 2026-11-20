@@ -1,6 +1,6 @@
 import { type MalwareScanner, type ObjectStore } from "@krizaka/storage";
-import { z } from "zod";
 
+import { documentAuditOf, documentKeyOf, isDocumentId } from "./document-address";
 import {
   INTAKE_OUTCOME,
   type IntakeOutcome,
@@ -9,10 +9,9 @@ import {
   screenQuarantined,
 } from "./document-intake";
 import type { DocumentRecord, DocumentStore, OwnerObjects } from "./document-port";
-import { accountTenantOf } from "./document-vault";
 import { DOCUMENT_ERROR, DocumentError } from "./errors";
 import { unlessShredded } from "./shredded-reads";
-import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
+import { AUDIT_ACTOR, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
 import type { StorageRulesSource } from "./storage-settings";
 
 export interface DocumentServiceDeps {
@@ -51,7 +50,6 @@ const TITLE_MAX = 200;
 const UNTITLED = "Document";
 
 /** Where a document's bytes live in its owner's store (itself under the owner's prefix): by id, never by a name the client chose. */
-export const objectKeyOf = (id: string): string => `documents/${id}`;
 
 export const documentView = (record: DocumentRecord): DocumentView => ({
   id: record.id,
@@ -65,7 +63,6 @@ const titleOf = (file: Omit<DocumentFile, "bytes">): string =>
   (file.title?.trim() || file.name.trim() || UNTITLED).slice(0, TITLE_MAX);
 
 const notFound = () => new DocumentError(DOCUMENT_ERROR.notFound);
-const isId = (id: string): boolean => z.uuid().safeParse(id).success;
 
 export interface DocumentService {
   /**
@@ -94,7 +91,7 @@ export interface DocumentService {
 
 /** The bytes of a document, or `null` when they are gone or can never open again (the owner's key was shredded). */
 async function bytesOf(objects: OwnerObjects, ownerId: string, id: string): Promise<Uint8Array | null> {
-  const object = await unlessShredded(() => objects.of(ownerId).get(objectKeyOf(id)), null);
+  const object = await unlessShredded(() => objects.of(ownerId).get(documentKeyOf(id)), null);
   return object?.bytes ?? null;
 }
 
@@ -109,8 +106,7 @@ const noteOf = (
   deps.audit({
     action,
     actor: { kind: AUDIT_ACTOR.account, id: ownerId },
-    tenantId: accountTenantOf(ownerId),
-    keyHash: keyHashOf(objectKeyOf(id)),
+    ...documentAuditOf(ownerId, id),
     ...(detail === undefined ? {} : { detail }),
   });
 
@@ -123,7 +119,7 @@ async function seal(
   screened: ScreenedFile,
 ): Promise<DocumentRecord> {
   const objects = deps.objects.of(ownerId);
-  await objects.put(objectKeyOf(id), screened.bytes, { contentType: screened.mediaType });
+  await objects.put(documentKeyOf(id), screened.bytes, { contentType: screened.mediaType });
   try {
     return await deps.documents.add({
       id,
@@ -133,7 +129,7 @@ async function seal(
       sizeBytes: screened.bytes.byteLength,
     });
   } catch (error) {
-    await objects.delete(objectKeyOf(id));
+    await objects.delete(documentKeyOf(id));
     throw error;
   }
 }
@@ -172,7 +168,7 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
   const note = (action: StorageAuditAction, ownerId: string, id: string, size?: number) =>
     noteOf(deps, action, ownerId, id, size === undefined ? undefined : { size });
   const ownRecord = async (ownerId: string, id: string): Promise<DocumentRecord> => {
-    const record = isId(id) ? await deps.documents.findForOwner(ownerId, id) : null;
+    const record = isDocumentId(id) ? await deps.documents.findForOwner(ownerId, id) : null;
     if (!record) throw notFound();
     return record;
   };
@@ -199,7 +195,7 @@ export function createDocumentService(deps: DocumentServiceDeps): DocumentServic
       await ownRecord(ownerId, id);
       // The metadata first: once it is gone nobody reaches the bytes, and a failed delete of the bytes leaves an orphan the sweep finds.
       await deps.documents.removeForOwner(ownerId, id);
-      await deps.objects.of(ownerId).delete(objectKeyOf(id));
+      await deps.objects.of(ownerId).delete(documentKeyOf(id));
       await note(STORAGE_AUDIT.deleted, ownerId, id);
     },
     async eraseOwner(ownerId) {

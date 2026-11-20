@@ -1,11 +1,10 @@
 import { subHours } from "@krizaka/time";
 
+import { DOCUMENT_KEY_PREFIX, documentAuditOf, documentIdOfKey, documentKeyOf } from "./document-address";
 import type { OwnerObjects } from "./document-port";
-import { objectKeyOf } from "./document-service";
-import { accountTenantOf } from "./document-vault";
 import type { RetentionStore, SweepCursor } from "./retention-port";
 import { unlessShredded } from "./shredded-reads";
-import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit } from "./storage-audit";
+import { AUDIT_ACTOR, STORAGE_AUDIT, type StorageAudit } from "./storage-audit";
 import type { StorageRulesSource } from "./storage-settings";
 
 /** The bounds of one run: what a run may touch at most, so a backlog is cleared over several runs and never in one unbounded pass. */
@@ -39,15 +38,12 @@ export interface SweepResult {
 // @fixed: the actor of every line the sweep writes
 const JOB = { kind: AUDIT_ACTOR.job, id: "retention-sweep" } as const;
 const HOURS_PER_DAY = 24;
-const DOCUMENT_PREFIX = objectKeyOf("");
-const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const deleted = (deps: SweepDeps, ownerId: string, id: string, reason: "expired" | "orphan") =>
   deps.audit({
     action: STORAGE_AUDIT.deleted,
     actor: JOB,
-    tenantId: accountTenantOf(ownerId),
-    keyHash: keyHashOf(objectKeyOf(id)),
+    ...documentAuditOf(ownerId, id),
     detail: { reason },
   });
 
@@ -56,7 +52,7 @@ async function removeExpired(deps: SweepDeps, cutoff: Date): Promise<number> {
   const expired = await deps.store.expired(cutoff, deps.limits.expired);
   for (const document of expired) {
     await deps.store.remove(document);
-    await deps.objects.of(document.ownerId).delete(objectKeyOf(document.id));
+    await deps.objects.of(document.ownerId).delete(documentKeyOf(document.id));
     await deleted(deps, document.ownerId, document.id, "expired");
   }
   return expired.length;
@@ -64,10 +60,10 @@ async function removeExpired(deps: SweepDeps, cutoff: Date): Promise<number> {
 
 /** The ids of the document objects an owner's store holds (a key that is not `documents/<uuid>` is not ours to judge), or none for a shredded owner. */
 async function objectIdsOf(deps: SweepDeps, ownerId: string): Promise<string[]> {
-  const listed = await unlessShredded(() => deps.objects.of(ownerId).list(DOCUMENT_PREFIX), []);
+  const listed = await unlessShredded(() => deps.objects.of(ownerId).list(DOCUMENT_KEY_PREFIX), []);
   return listed
-    .map((object) => object.key.slice(DOCUMENT_PREFIX.length))
-    .filter((id) => ID.test(id))
+    .map((object) => documentIdOfKey(object.key))
+    .filter((id): id is string => id !== null)
     .slice(0, deps.limits.objectsPerOwner);
 }
 
@@ -79,7 +75,7 @@ async function removeOrphans(deps: SweepDeps, ownerId: string): Promise<number> 
   let removed = 0;
   for (const id of ids.filter((candidate) => !known.has(candidate))) {
     if ((await deps.store.existing(ownerId, [id])).has(id)) continue;
-    await deps.objects.of(ownerId).delete(objectKeyOf(id));
+    await deps.objects.of(ownerId).delete(documentKeyOf(id));
     await deleted(deps, ownerId, id, "orphan");
     removed += 1;
   }
