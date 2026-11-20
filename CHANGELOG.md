@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/krizaka/kridoc/compare/v0.14.0...v0.15.0) (2026-11-20)
+
+
+### Features
+
+* **storage-api:** products' keys on @krizaka/api-keys, first slice: table, expiry, grace rotation, last use, both formats ([#95](https://github.com/krizaka/kridoc/issues/95)) ([847d4aa](https://github.com/krizaka/kridoc/commit/847d4aa9c2c63939f63e12ddc196306f34dd6c67))
+
 ## [0.14.0](https://github.com/krizaka/kridoc/compare/v0.13.2...v0.14.0) (2026-11-20)
 
 
