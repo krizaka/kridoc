@@ -33,6 +33,7 @@ every string in `messages/*.json`, `@krizaka/ui` blocks, tests with every change
   `SETTINGS.documents`. Off by default (`MEDIA_STORAGE_ENABLED`): every document route answers 404. On, production requires `AUTH_ENABLED=on`,
   `MEDIA_STORAGE_PROVIDER=s3`, `MEDIA_DOCUMENTS_TENANT` and the `MEDIA_S3_*` settings with a Canadian region (Law 25). No live bucket in CI: the
   bucket adapter runs `objectStoreContract` on a fake S3.
+- **Operating the storage API**: one JSON call line per call (`callLineOf`, written by `storage-api-edge.ts`), SLO and incidents in [docs/runbooks/storage-api.md](runbooks/storage-api.md).
 - **Storage API for the other products** (krizaka-internal#3756, slice 5 of the design note): `/api/storage/v1/objects/{key}` (PUT, GET,
   HEAD, DELETE), `/api/storage/v1/objects?prefix=`, `/api/storage/v1/links/{key}` (POST signs, GET opens). A client is a row of
   `storage_client` (`infra/migrations/2026-11-18-storage-clients.sql`); its tenant comes from its `kst1.` bearer token, never from the

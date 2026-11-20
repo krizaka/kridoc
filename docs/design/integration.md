@@ -324,7 +324,7 @@ externes (K2).
 
 ### 6.5 The runbook
 
-`docs/runbooks/storage-api.md` (T4, krizaka-internal#4043):
+[`docs/runbooks/storage-api.md`](../runbooks/storage-api.md) (T4, krizaka-internal#4043; the call line is `callLineOf` in `apps/web/lib/storage/storage-audit.ts`):
 
 - Kridoc down or slow.
 - A key leaked: revoke, issue a new key, redeploy the app, check the ping.

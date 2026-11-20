@@ -13,6 +13,7 @@ import { installationVaultOf } from "@/lib/storage/document-vault";
 import { objectStoreOf, platformFetch } from "@/lib/storage/object-store";
 import { signedLinksOf } from "@/lib/storage/signed-links";
 import { createStorageApi, type LinkQuery, STORAGE_API_ACTION, type StorageApi } from "@/lib/storage/storage-api";
+import { callLineOf } from "@/lib/storage/storage-audit";
 import { createStorageClients, type StorageClients } from "@/lib/storage/storage-clients";
 import type { StorageRulesSource } from "@/lib/storage/storage-settings";
 
@@ -86,14 +87,43 @@ export function storageApiRuntime(env: Env = readEnv()): StorageApiRuntime {
   return { api, clients, rules, env };
 }
 
-/** Runs a route's work and answers with the request's `X-Request-Id` (echoed when valid, else generated), refusals included. */
-async function answered(request: Request, work: () => Promise<Response>): Promise<Response> {
+const API_PREFIX = "/api/storage/v1/";
+
+/** Writes the call's line: what the route is and which object, read from the request and the answer, never from a body. */
+function logCall(request: Request, response: Response, requestId: string, started: number, client?: StorageClient): void {
+  const [route = "", ...rest] = new URL(request.url).pathname.replace(API_PREFIX, "").split("/");
+  const key = rest.length > 0 ? rest.join("/") : undefined; // still percent-encoded: only its hash is written
+  const length = response.headers.get("content-length") ?? request.headers.get("content-length");
+  const digest = response.headers.get("repr-digest") ?? request.headers.get("repr-digest") ?? undefined;
+  console.info(
+    callLineOf({
+      at: new Date(),
+      requestId,
+      ...(client ? { client: { id: client.id, tenantId: client.tenantId } } : {}),
+      method: request.method,
+      route,
+      ...(key === undefined ? {} : { key }),
+      status: response.status,
+      ms: performance.now() - started,
+      ...(length !== null && /^\d+$/.test(length) ? { size: Number(length) } : {}),
+      ...(digest === undefined ? {} : { digest }),
+    }),
+  );
+}
+
+/** Runs a route's work and answers with the request's `X-Request-Id` (echoed when valid, else generated), refusals included; one call line each. */
+async function answered(request: Request, work: (seen: (client: StorageClient) => void) => Promise<Response>): Promise<Response> {
   const requestId = requestIdOf(request.headers);
+  const started = performance.now();
+  let client: StorageClient | undefined;
+  let response: Response;
   try {
-    return withRequestId(await work(), requestId);
+    response = withRequestId(await work((c) => (client = c)), requestId);
   } catch (error) {
-    return withRequestId(storageApiRefusal(error, request, requestId), requestId);
+    response = withRequestId(storageApiRefusal(error, request, requestId), requestId);
   }
+  logCall(request, response, requestId, started, client);
+  return response;
 }
 
 /** A route of a product's client, whole: the feature check, the token (and the limiter), then the route's one service call. */
@@ -101,9 +131,10 @@ export async function storageApiRoute(
   request: Request,
   work: (context: StorageApiRuntime & { client: StorageClient }) => Promise<Response>,
 ): Promise<Response> {
-  return answered(request, async () => {
+  return answered(request, async (seen) => {
     const runtime = storageApiRuntime();
     const client = await runtime.api.authenticate(bearerOf(request.headers));
+    seen(client);
     return work({ ...runtime, client });
   });
 }
