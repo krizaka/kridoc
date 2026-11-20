@@ -1,4 +1,5 @@
 import { documentRoute } from "@/app/documents-edge";
+import { NO_STORE } from "@/lib/http/stored-file";
 import { downloadOf } from "@/lib/storage/http";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,6 @@ export async function GET(request: Request, { params }: Params) {
 export async function DELETE(request: Request, { params }: Params) {
   return documentRoute(request, async ({ service, ownerOf }) => {
     await service.remove(await ownerOf(request), (await params).id);
-    return new Response(null, { status: 204, headers: { "Cache-Control": "private, no-store" } });
+    return new Response(null, { status: 204, headers: NO_STORE });
   });
 }

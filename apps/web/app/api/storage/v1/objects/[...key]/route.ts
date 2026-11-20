@@ -47,6 +47,6 @@ export async function HEAD(request: Request, params: Params) {
 export async function DELETE(request: Request, params: Params) {
   return storageApiRoute(request, async ({ api, client }) => {
     const record = await api.remove(client, await keyOf(params));
-    return jsonOf(record, { headers: { "Cache-Control": "private, no-store" } });
+    return jsonOf(record);
   });
 }

@@ -2,6 +2,7 @@ import { RateLimited } from "@krizaka/rate-limit";
 import { STORAGE_CODE, StorageError, type StoredObject } from "@krizaka/storage";
 
 import { localeOfRequest, problemOf } from "@/lib/auth/http";
+import { storedFileHeaders } from "@/lib/http/stored-file";
 import { getDictionary } from "@/lib/i18n";
 
 import { STORAGE_API_ERROR, STORAGE_API_STATUS, StorageApiError, type StorageApiErrorCode } from "./api-errors";
@@ -97,12 +98,7 @@ export async function boundedBody(request: Request, maxBytes: number): Promise<U
   return Buffer.concat(chunks);
 }
 
-const OBJECT_HEADERS = {
-  "Content-Disposition": "attachment",
-  "Content-Security-Policy": "default-src 'none'; sandbox",
-  "X-Content-Type-Options": "nosniff",
-  "Cache-Control": "private, no-store",
-} as const;
+const OBJECT_HEADERS = storedFileHeaders("attachment");
 
 /** An object's bytes as the answer: its stored type, never rendered inline, never cached, never sniffed again by a browser. */
 export const objectResponse = (object: StoredObject & { sha256: string }): Response =>

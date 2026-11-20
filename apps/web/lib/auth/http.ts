@@ -1,5 +1,6 @@
 import { RateLimited } from "@krizaka/rate-limit";
 
+import { NO_STORE } from "@/lib/http/stored-file";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { preferredLocale } from "@/lib/locale";
 
@@ -7,8 +8,6 @@ import { AUTH_ERROR, AUTH_STATUS, AuthError, type AuthErrorCode } from "./errors
 
 /** The cookie that remembers a visitor's language (see proxy.ts). */
 const LOCALE_COOKIE = "NEXT_LOCALE";
-
-const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 
 export function jsonOf(body: unknown, init: ResponseInit = {}): Response {
   return Response.json(body, { ...init, headers: { ...NO_STORE, ...init.headers } });

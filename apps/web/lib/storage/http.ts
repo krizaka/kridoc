@@ -2,6 +2,7 @@ import { STORAGE_CODE, StorageError } from "@krizaka/storage";
 
 import { AUTH_ERROR, AuthError } from "@/lib/auth/errors";
 import { localeOfRequest, problemOf } from "@/lib/auth/http";
+import { storedFileHeaders } from "@/lib/http/stored-file";
 import { getDictionary } from "@/lib/i18n";
 
 import { DOCUMENT_ERROR, DOCUMENT_STATUS, DocumentError, type DocumentErrorCode } from "./errors";
@@ -48,10 +49,7 @@ export function downloadOf(bytes: Uint8Array, mediaType: string, title: string):
     headers: {
       "Content-Type": mediaType,
       "Content-Length": String(bytes.byteLength),
-      "Content-Disposition": attachmentOf(title),
-      "Content-Security-Policy": "default-src 'none'; sandbox",
-      "X-Content-Type-Options": "nosniff",
-      "Cache-Control": "private, no-store",
+      ...storedFileHeaders(attachmentOf(title)),
     },
   });
 }
