@@ -7,7 +7,7 @@ import { getDictionary } from "@/lib/i18n";
 import { STORAGE_API_ERROR, STORAGE_API_STATUS, StorageApiError, type StorageApiErrorCode } from "./api-errors";
 import { reprDigestOf } from "./object-digest";
 
-/** The refusals of @krizaka/storage the API can meet, as its own codes. */
+/** The refusals of @krizaka/storage the API can meet, as its own codes. `shredded` is the edge's net: reads already answer it through shredded-reads.ts. */
 const FROM_STORAGE: Partial<Record<string, StorageApiErrorCode>> = {
   [STORAGE_CODE.badKey]: STORAGE_API_ERROR.keyRefused,
   [STORAGE_CODE.tooBig]: STORAGE_API_ERROR.tooBig,
