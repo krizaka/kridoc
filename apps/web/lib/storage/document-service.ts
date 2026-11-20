@@ -1,5 +1,4 @@
 import { type MalwareScanner, type ObjectStore } from "@krizaka/storage";
-import { z } from "zod";
 
 import { documentAuditOf, documentKeyOf, isDocumentId } from "./document-address";
 import {
