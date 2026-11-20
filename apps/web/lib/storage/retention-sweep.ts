@@ -4,8 +4,8 @@ import type { OwnerObjects } from "./document-port";
 import { objectKeyOf } from "./document-service";
 import { accountTenantOf } from "./document-vault";
 import type { RetentionStore, SweepCursor } from "./retention-port";
-import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit } from "./storage-audit";
 import { unlessShredded } from "./shredded-reads";
+import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit } from "./storage-audit";
 import type { StorageRulesSource } from "./storage-settings";
 
 /** The bounds of one run: what a run may touch at most, so a backlog is cleared over several runs and never in one unbounded pass. */

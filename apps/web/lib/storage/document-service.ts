@@ -11,8 +11,8 @@ import {
 import type { DocumentRecord, DocumentStore, OwnerObjects } from "./document-port";
 import { accountTenantOf } from "./document-vault";
 import { DOCUMENT_ERROR, DocumentError } from "./errors";
-import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
 import { unlessShredded } from "./shredded-reads";
+import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
 import type { StorageRulesSource } from "./storage-settings";
 
 export interface DocumentServiceDeps {
