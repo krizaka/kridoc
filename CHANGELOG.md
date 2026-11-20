@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/krizaka/kridoc/compare/v0.13.2...v0.14.0) (2026-11-20)
+
+
+### Features
+
+* **ops:** one call line per storage API call, and the storage API runbook ([#91](https://github.com/krizaka/kridoc/issues/91)) ([b3aa4d9](https://github.com/krizaka/kridoc/commit/b3aa4d90fb1e23b7483af2ffc3fd781d4664e545))
+
 ## [0.13.2](https://github.com/krizaka/kridoc/compare/v0.13.1...v0.13.2) (2026-11-19)
 
 
