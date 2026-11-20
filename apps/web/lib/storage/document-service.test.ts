@@ -6,8 +6,9 @@ import { join } from "node:path";
 import { memoryMalwareScanner, memoryObjectStore, memoryTenantKeyStore, type ObjectStore } from "@krizaka/storage";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { documentKeyOf } from "./document-address";
 import type { OwnerObjects } from "./document-port";
-import { createDocumentService, type DocumentService, documentView, objectKeyOf } from "./document-service";
+import { createDocumentService, type DocumentService, documentView } from "./document-service";
 import { accountTenantOf, ownerObjectsOf } from "./document-vault";
 import { memoryDocumentStore } from "./memory-document-store";
 import { objectStoreOf } from "./object-store";
@@ -110,8 +111,8 @@ describe("Kridoc's documents on the local adapter", () => {
   it("keeps the bytes by owner and id, sealed under the owner's key, inside the installation's tenant folder", async () => {
     const record = await service.upload(A, { bytes: PDF, name: "../../etc/passwd" });
     expect(record.title).toBe("../../etc/passwd");
-    expect(await objects.of(A).head(objectKeyOf(record.id))).toEqual({
-      key: objectKeyOf(record.id),
+    expect(await objects.of(A).head(documentKeyOf(record.id))).toEqual({
+      key: documentKeyOf(record.id),
       size: PDF.byteLength,
     });
     const onDisk = await readFile(join(root, "kridoc-test", "t", accountTenantOf(A), "documents", record.id));
@@ -143,7 +144,7 @@ describe("Kridoc's documents on the local adapter", () => {
   it("deletes the metadata and the bytes; a second delete is « not found »", async () => {
     const record = await service.upload(A, { bytes: PDF, name: "bail.pdf" });
     await service.remove(A, record.id);
-    expect(await objects.of(A).get(objectKeyOf(record.id))).toBeNull();
+    expect(await objects.of(A).get(documentKeyOf(record.id))).toBeNull();
     expect(await service.list(A)).toEqual([]);
     await expect(service.remove(A, record.id)).rejects.toMatchObject({ code: "DOCUMENT_NOT_FOUND" });
     await expect(service.read(A, record.id)).rejects.toMatchObject({ code: "DOCUMENT_NOT_FOUND" });
