@@ -13,7 +13,9 @@ describe("storedFileHeaders", () => {
   });
 
   it("carries the given disposition", () => {
-    expect(storedFileHeaders('attachment; filename="a.pdf"')["Content-Disposition"]).toBe('attachment; filename="a.pdf"');
+    expect(storedFileHeaders('attachment; filename="a.pdf"')["Content-Disposition"]).toBe(
+      'attachment; filename="a.pdf"',
+    );
   });
 
   it("NO_STORE is the one never-cached header", () => {
