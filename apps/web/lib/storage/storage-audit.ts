@@ -38,3 +38,39 @@ const KEY_HASH_CHARS = 16;
 
 export const keyHashOf = (key: string): string =>
   createHash("sha256").update(key).digest("hex").slice(0, KEY_HASH_CHARS);
+
+/** What the edge knows of one call to the storage API when it answers. */
+export interface StorageCallInput {
+  at: Date;
+  requestId: string;
+  /** Absent when the token was refused: the call has no client. */
+  client?: { id: string; tenantId: string };
+  method: string;
+  /** The route and the object key (`objects/<key>`, `ping`): only the key is hashed, the route is the operation. */
+  route: string;
+  key?: string;
+  status: number;
+  ms: number;
+  size?: number;
+  /** The `Repr-Digest` header as it travelled: a digest of the bytes, not the bytes. */
+  digest?: string;
+}
+
+/**
+ * The one line per call of the storage API (design « What Kridoc logs and keeps »): JSON on one line, so the SLO is measured from it.
+ * Never the bytes, never the key (its hash), never a token or a name.
+ */
+export const callLineOf = (call: StorageCallInput): string =>
+  JSON.stringify({
+    kind: "storage.call",
+    at: call.at.toISOString(),
+    requestId: call.requestId,
+    client: call.client?.id ?? null,
+    tenant: call.client?.tenantId ?? null,
+    operation: `${call.method.toUpperCase()} ${call.route}`,
+    keyHash: call.key === undefined ? null : keyHashOf(call.key),
+    size: call.size ?? null,
+    digest: call.digest ?? null,
+    status: call.status,
+    ms: Math.round(call.ms),
+  });
