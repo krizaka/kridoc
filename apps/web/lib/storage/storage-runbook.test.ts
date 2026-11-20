@@ -13,7 +13,13 @@ describe("the storage API runbook", () => {
   const steps = stepsOf(text);
 
   it("has a section for each incident the design names", () => {
-    for (const title of ["Kridoc down or slow", "A key leaked", "A tenant at its quota", "The bucket unreachable", "A restore"])
+    for (const title of [
+      "Kridoc down or slow",
+      "A key leaked",
+      "A tenant at its quota",
+      "The bucket unreachable",
+      "A restore",
+    ])
       expect(text).toContain(`## ${title}`);
     expect(steps.length).toBeGreaterThanOrEqual(10);
   });

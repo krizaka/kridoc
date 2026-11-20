@@ -90,7 +90,13 @@ export function storageApiRuntime(env: Env = readEnv()): StorageApiRuntime {
 const API_PREFIX = "/api/storage/v1/";
 
 /** Writes the call's line: what the route is and which object, read from the request and the answer, never from a body. */
-function logCall(request: Request, response: Response, requestId: string, started: number, client?: StorageClient): void {
+function logCall(
+  request: Request,
+  response: Response,
+  requestId: string,
+  started: number,
+  client?: StorageClient,
+): void {
   const [route = "", ...rest] = new URL(request.url).pathname.replace(API_PREFIX, "").split("/");
   const key = rest.length > 0 ? rest.join("/") : undefined; // still percent-encoded: only its hash is written
   const length = response.headers.get("content-length") ?? request.headers.get("content-length");
@@ -112,7 +118,10 @@ function logCall(request: Request, response: Response, requestId: string, starte
 }
 
 /** Runs a route's work and answers with the request's `X-Request-Id` (echoed when valid, else generated), refusals included; one call line each. */
-async function answered(request: Request, work: (seen: (client: StorageClient) => void) => Promise<Response>): Promise<Response> {
+async function answered(
+  request: Request,
+  work: (seen: (client: StorageClient) => void) => Promise<Response>,
+): Promise<Response> {
   const requestId = requestIdOf(request.headers);
   const started = performance.now();
   let client: StorageClient | undefined;
