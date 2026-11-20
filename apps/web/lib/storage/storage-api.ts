@@ -5,14 +5,13 @@ import {
   type ObjectInfo,
   type ObjectStore,
   sniffType,
-  STORAGE_CODE,
-  StorageError,
   type StoredObject,
 } from "@krizaka/storage";
 
 import { STORAGE_API_ERROR, StorageApiError } from "./api-errors";
 import { STORAGE_SCOPE, type StorageClient, type StorageScope } from "./client-port";
 import { sha256Of } from "./object-digest";
+import { unlessShredded } from "./shredded-reads";
 import type { LinkClaim, SignedLinks } from "./signed-links";
 import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
 import type { StorageClients } from "./storage-clients";
@@ -161,12 +160,7 @@ function need(client: StorageClient, scope: StorageScope): void {
 
 /** An object, or `null` when it is missing or can never open again (its tenant's key was shredded). */
 async function maybe(store: ObjectStore, key: string): Promise<StoredObject | null> {
-  try {
-    return await store.get(key);
-  } catch (error) {
-    if (error instanceof StorageError && error.code === STORAGE_CODE.shredded) return null;
-    throw error;
-  }
+  return unlessShredded(() => store.get(key), null);
 }
 
 /** An object, or « not found ». */

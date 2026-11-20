@@ -1,4 +1,3 @@
-import { STORAGE_CODE, StorageError } from "@krizaka/storage";
 import { subHours } from "@krizaka/time";
 
 import type { OwnerObjects } from "./document-port";
@@ -6,6 +5,7 @@ import { objectKeyOf } from "./document-service";
 import { accountTenantOf } from "./document-vault";
 import type { RetentionStore, SweepCursor } from "./retention-port";
 import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit } from "./storage-audit";
+import { unlessShredded } from "./shredded-reads";
 import type { StorageRulesSource } from "./storage-settings";
 
 /** The bounds of one run: what a run may touch at most, so a backlog is cleared over several runs and never in one unbounded pass. */
@@ -64,16 +64,11 @@ async function removeExpired(deps: SweepDeps, cutoff: Date): Promise<number> {
 
 /** The ids of the document objects an owner's store holds (a key that is not `documents/<uuid>` is not ours to judge), or none for a shredded owner. */
 async function objectIdsOf(deps: SweepDeps, ownerId: string): Promise<string[]> {
-  try {
-    const listed = await deps.objects.of(ownerId).list(DOCUMENT_PREFIX);
-    return listed
-      .map((object) => object.key.slice(DOCUMENT_PREFIX.length))
-      .filter((id) => ID.test(id))
-      .slice(0, deps.limits.objectsPerOwner);
-  } catch (error) {
-    if (error instanceof StorageError && error.code === STORAGE_CODE.shredded) return [];
-    throw error;
-  }
+  const listed = await unlessShredded(() => deps.objects.of(ownerId).list(DOCUMENT_PREFIX), []);
+  return listed
+    .map((object) => object.key.slice(DOCUMENT_PREFIX.length))
+    .filter((id) => ID.test(id))
+    .slice(0, deps.limits.objectsPerOwner);
 }
 
 /** An owner's objects that have no row: each is asked again right before it goes, so a document being uploaded (bytes first, row second) is spared. */

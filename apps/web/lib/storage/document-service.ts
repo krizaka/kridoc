@@ -1,4 +1,4 @@
-import { type MalwareScanner, type ObjectStore, STORAGE_CODE, StorageError } from "@krizaka/storage";
+import { type MalwareScanner, type ObjectStore } from "@krizaka/storage";
 import { z } from "zod";
 
 import {
@@ -12,6 +12,7 @@ import type { DocumentRecord, DocumentStore, OwnerObjects } from "./document-por
 import { accountTenantOf } from "./document-vault";
 import { DOCUMENT_ERROR, DocumentError } from "./errors";
 import { AUDIT_ACTOR, keyHashOf, STORAGE_AUDIT, type StorageAudit, type StorageAuditAction } from "./storage-audit";
+import { unlessShredded } from "./shredded-reads";
 import type { StorageRulesSource } from "./storage-settings";
 
 export interface DocumentServiceDeps {
@@ -93,12 +94,8 @@ export interface DocumentService {
 
 /** The bytes of a document, or `null` when they are gone or can never open again (the owner's key was shredded). */
 async function bytesOf(objects: OwnerObjects, ownerId: string, id: string): Promise<Uint8Array | null> {
-  try {
-    return (await objects.of(ownerId).get(objectKeyOf(id)))?.bytes ?? null;
-  } catch (error) {
-    if (error instanceof StorageError && error.code === STORAGE_CODE.shredded) return null;
-    throw error;
-  }
+  const object = await unlessShredded(() => objects.of(ownerId).get(objectKeyOf(id)), null);
+  return object?.bytes ?? null;
 }
 
 /** One audit line of a document: who, which tenant, the key's hash and the detail (sizes and codes, never content). */
