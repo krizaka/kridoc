@@ -1,12 +1,6 @@
 import type { Clock } from "@krizaka/db";
 import type { Limiter } from "@krizaka/rate-limit";
-import {
-  assertKey,
-  type ObjectInfo,
-  type ObjectStore,
-  sniffType,
-  type StoredObject,
-} from "@krizaka/storage";
+import { assertKey, type ObjectInfo, type ObjectStore, sniffType, type StoredObject } from "@krizaka/storage";
 
 import { STORAGE_API_ERROR, StorageApiError } from "./api-errors";
 import { STORAGE_SCOPE, type StorageClient, type StorageScope } from "./client-port";
